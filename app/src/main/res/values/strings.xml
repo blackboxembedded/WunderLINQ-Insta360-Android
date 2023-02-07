@@ -1,0 +1,41 @@
+<resources>
+    <string name="app_name" translatable="false">WunderLINQ Insta360 Remote</string>
+    <string name="ble_not_supported">BLE is not supported</string>
+    <string name="cameralist_title">Cameras</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
+    <string name="unknown_device">No Name</string>
+    <string name="location_alert_title">Location Request</string>
+    <string name="location_alert_body">Location Permissions are required for Bluetooth scanning</string>
+    <string name="negative_location_alert_title">Location Request Denied</string>
+    <string name="negative_location_alert_body">Location Permissions are required for Bluetooth scanning</string>
+
+    <string name="location_request_alert_title">Location Permission Required</string>
+    <string name="location_request_alert_body">The WunderLINQ Insta360 Remote needs access to your location to scan for nearby Insta360 Cameras.</string>
+    <string name="bt_request_alert_title">Bluetooth Permission Required</string>
+    <string name="bt_request_alert_body">The WunderLINQ Insta360 Remote needs the Bluetooth scanning permission to scan for nearby Insta360 Cameras. </string>
+
+    <string name="btscan_alert_title">Bluetooth Scan Request</string>
+    <string name="btscan_alert_body">Location Permissions are required for Bluetooth scanning</string>
+    <string name="negative_btscan_alert_title">Location Request Denied</string>
+    <string name="negative_btscan_alert_body">Location Permissions are required for Bluetooth scanning</string>
+
+    <string name="btconnect_alert_title">Bluetooth Connect Request</string>
+    <string name="btconnect_alert_body">Bluetooth Connect Permissions are required to connect to your Insta360 Camera</string>
+    <string name="negative_btconnect_alert_title">Bluetooth Connect Request Denied</string>
+    <string name="negative_btconnect_alert_body">Location Permissions are required for Bluetooth scanning</string>
+
+    <string name="task_title_photo">Take Photo</string>
+    <string name="task_title_start_record">Start Video Recording</string>
+    <string name="task_title_stop_record">Stop Video Recording</string>
+    <string name="task_title_start_timelapse">Start Timelapse Recording</string>
+    <string name="task_title_stop_timelapse">Stop Timelapse Recording</string>
+    <string name="pref_highlightColor_title">Highlight Color</string>
+
+    <!-- Preference Titles -->
+    <string name="title_activity_settings">Settings</string>
+    <string name="ui_title">User Interface</string>
+
+
+</resources>
