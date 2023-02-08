@@ -365,7 +365,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                 break;
             case 1:
                 //HDR
-                modeImageView.setImageResource(R.drawable.ic_video_camera);
+                modeImageView.setImageResource(R.drawable.hdr);
                 if (cameraStatus.busy){
                     shutterButton.setText(R.string.task_title_stop_hdr);
                 } else {
@@ -374,7 +374,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                 break;
             case 2:
                 //Interval
-                modeImageView.setImageResource(R.drawable.timelapse);
+                modeImageView.setImageResource(R.drawable.interval);
                 if (cameraStatus.busy){
                     shutterButton.setText(R.string.task_title_stop_interval);
                 } else {

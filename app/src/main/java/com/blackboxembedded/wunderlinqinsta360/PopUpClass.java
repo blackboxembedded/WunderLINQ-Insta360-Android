@@ -25,6 +25,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 
+
 public class PopUpClass {
 
     public void showPopupWindow(final View view) {
@@ -48,12 +49,10 @@ public class PopUpClass {
 
         //Setup Media Player
 
-
         popupView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 //Close the window when clicked
-
                 popupWindow.dismiss();
                 return true;
             }
@@ -63,7 +62,6 @@ public class PopUpClass {
             @Override
             public boolean onKey(View view, int i, KeyEvent keyEvent) {
                 //Close the window when clicked
-
                 popupWindow.dismiss();
                 return true;
             }
