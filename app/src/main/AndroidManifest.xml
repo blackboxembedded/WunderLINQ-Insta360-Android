@@ -54,7 +54,7 @@
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="wunderlinqgp" />
+                <data android:scheme="wunderlinqi360" />
             </intent-filter>
         </activity>
         <activity
