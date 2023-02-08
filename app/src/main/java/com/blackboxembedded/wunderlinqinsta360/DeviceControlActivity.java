@@ -46,6 +46,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.net.wifi.WifiManager;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
 import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener;
@@ -81,8 +82,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
 
     private byte[] response;
     private int responsePosition = 0;
-
-    private int mode;
 
     // Code to manage Service lifecycle.
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -138,7 +137,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                     if(bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) != null) {
                         if (bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE).contains(GattAttributes.INSTA360_COMMANDRESPONSE_CHARACTERISTIC)) {
                             byte[] data = bd.getByteArray(BluetoothLeService.EXTRA_BYTE_VALUE);
-                            String characteristicValue = Utils.ByteArraytoHex(data) + " ";
+                            String characteristicValue = Utils.ByteArraytoHex(data);
                             Log.d(TAG, "UUID: " + bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) + " DATA: " + characteristicValue);
 
                             if(response == null){
@@ -148,17 +147,17 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                                     responsePosition = responsePosition + data.length;
                                 }
                             } else {
-                                Log.d(TAG,"Postion: " + responsePosition);
                                 if (responsePosition != 255){
                                     System.arraycopy(data, 0, response, responsePosition, data.length);
                                     responsePosition = responsePosition + data.length;
                                     if (responsePosition == 255) {
                                         Log.d(TAG, Utils.ByteArraytoHex(response));
 
+                                        mBluetoothLeService.command2();
                                         mBluetoothLeService.command3();
                                     }
                                 } else {
-                                    if (data[0] == (byte) 0x10) {
+                                    if (data[0] == (byte) 0x12) {
                                         //mBluetoothLeService.command3();
                                         connectToWifi(mDeviceName + ".OSC","88888888");
                                     } else if (data[0] == (byte) 0x07) {
@@ -169,7 +168,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                         }
                     }
                 }
-
             }
         }
     };
@@ -238,6 +236,11 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             mBluetoothLeService.connect(mDeviceAddress, mDeviceName);
         }
 
+        cameraStatus = new CameraStatus();
+        cameraStatus.busy = false;
+        cameraStatus.mode = 0;
+        // Capture Status Callback
+        InstaCameraManager.getInstance().setCaptureStatusListener(this);
     }
 
     @Override
@@ -263,6 +266,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         }
         unbindService(mServiceConnection);
         mBluetoothLeService = null;
+        InstaCameraManager.getInstance().closeCamera();
     }
 
     @Override
@@ -331,9 +335,27 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     };
 
     private void updateUIElements(){
-        switch (InstaCameraManager.getInstance().getCurrentCaptureType()) {
-            case (byte)0xE8:
-                //Video
+        Log.d(TAG,"updateUIElements()");
+        int type = InstaCameraManager.getInstance().getCurrentCaptureType();
+        if(type == -1){
+            cameraStatus.busy = false;
+        } else if(type == 1003){
+            cameraStatus.busy = true;
+            cameraStatus.mode = 0;
+        } else if(type == 1004){
+            cameraStatus.busy = true;
+            cameraStatus.mode = 1;
+        } else if(type == 1002){
+            cameraStatus.busy = true;
+            cameraStatus.mode = 2;
+        } else if(type == 1005){
+            cameraStatus.busy = true;
+            cameraStatus.mode = 3;
+        }
+        Log.d(TAG,"CAPTURE_TYPE: " + type);
+        switch (cameraStatus.mode) {
+            case 0:
+                //Normal
                 modeImageView.setImageResource(R.drawable.ic_video_camera);
                 if (cameraStatus.busy){
                     shutterButton.setText(R.string.task_title_stop_record);
@@ -341,12 +363,25 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                     shutterButton.setText(R.string.task_title_start_record);
                 }
                 break;
-            case (byte)0xE9:
-                //Photo
-                modeImageView.setImageResource(R.drawable.ic_camera);
-                shutterButton.setText(R.string.task_title_photo);
+            case 1:
+                //HDR
+                modeImageView.setImageResource(R.drawable.ic_video_camera);
+                if (cameraStatus.busy){
+                    shutterButton.setText(R.string.task_title_stop_hdr);
+                } else {
+                    shutterButton.setText(R.string.task_title_start_hdr);
+                }
                 break;
-            case (byte)0xEA:
+            case 2:
+                //Interval
+                modeImageView.setImageResource(R.drawable.timelapse);
+                if (cameraStatus.busy){
+                    shutterButton.setText(R.string.task_title_stop_interval);
+                } else {
+                    shutterButton.setText(R.string.task_title_start_interval);
+                }
+                break;
+            case 3:
                 //Timelapse
                 modeImageView.setImageResource(R.drawable.timelapse);
                 if (cameraStatus.busy){
@@ -360,6 +395,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                 Log.e(TAG,"Unknown mode: " + cameraStatus.mode);
                 break;
         }
+
         progressBar.setVisibility(View.INVISIBLE);
         modeImageView.setVisibility(View.VISIBLE);
         shutterButton.setVisibility(View.VISIBLE);
@@ -378,14 +414,81 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     private void rightKey(){  }
 
     private void toggleShutter(){
+        switch (cameraStatus.mode) {
+            case 0:
+                if (cameraStatus.busy) {
+                    InstaCameraManager.getInstance().stopNormalRecord();
+                    cameraStatus.busy = false;
+                } else {
+                    if (checkSdCardEnabled()) {
+                        cameraStatus.busy = true;
+                        InstaCameraManager.getInstance().startNormalRecord();
+                    }
+                }
+                break;
+            case 1:
+                if (cameraStatus.busy) {
+                    InstaCameraManager.getInstance().stopHDRRecord();
+                    cameraStatus.busy = false;
+                } else {
+                    if (checkSdCardEnabled()) {
+                        cameraStatus.busy = true;
+                        InstaCameraManager.getInstance().startHDRRecord();
+                    }
+                }
+                break;
+            case 2:
+                if (cameraStatus.busy) {
+                    InstaCameraManager.getInstance().stopIntervalShooting();
+                    cameraStatus.busy = false;
+                } else {
+                    if (checkSdCardEnabled()) {
+                        if (checkSdCardEnabled()) {
+                            cameraStatus.busy = true;
+                            InstaCameraManager.getInstance().setIntervalShootingTime(3000);
+                            InstaCameraManager.getInstance().startIntervalShooting();
+                        }
+                    }
+                }
+                break;
+            case 3:
+                if (cameraStatus.busy) {
+                    InstaCameraManager.getInstance().stopTimeLapse();
+                    cameraStatus.busy = false;
+                } else {
+                    if (checkSdCardEnabled()) {
+                        cameraStatus.busy = true;
+                        InstaCameraManager.getInstance().setTimeLapseInterval(500);
+                        InstaCameraManager.getInstance().startTimeLapse();
+                    }
+                }
+                break;
+        }
+        updateUIElements();
     }
 
     private void nextMode() {
         //Next Camera Mode
+        if(!cameraStatus.busy) {
+            if (cameraStatus.mode < 3) {
+                cameraStatus.mode = cameraStatus.mode + 1;
+            } else {
+                cameraStatus.mode = 0;
+            }
+        }
+        updateUIElements();
     }
 
     private void previousMode() {
         //Previous Camera Mode
+        if(!cameraStatus.busy) {
+            if (cameraStatus.mode > 0) {
+                cameraStatus.mode = cameraStatus.mode - 1;
+            } else {
+                cameraStatus.mode = 0;
+            }
+        }
+        updateUIElements();
     }
 
     public void disconnectFromWifi(){
@@ -478,16 +581,23 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         });
     }
 
+    private boolean checkSdCardEnabled() {
+        if (!InstaCameraManager.getInstance().isSdCardEnabled()) {
+            Toast.makeText(this, R.string.sd_card_error, Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public void onCameraStatusChanged(boolean enabled) {
         super.onCameraStatusChanged(enabled);
-
         if (enabled) {
             Log.d(TAG,"Camera Enabled");
             progressBar.setVisibility(View.INVISIBLE);
             modeImageView.setVisibility(View.VISIBLE);
             shutterButton.setVisibility(View.VISIBLE);
-            int type = InstaCameraManager.getInstance().getCurrentCaptureType();
+            updateUIElements();
         } else {
             //CameraBindNetworkManager.getInstance().unbindNetwork();
             //NetworkManager.getInstance().clearBindProcess();
@@ -498,7 +608,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     @Override
     public void onCameraConnectError(int errorCode) {
         super.onCameraConnectError(errorCode);
-
         Log.d(TAG,"onCameraConnectError: " + errorCode);
         //CameraBindNetworkManager.getInstance().unbindNetwork();
         //Toast.makeText(this, getResources().getString(R.string.main_toast_camera_connect_error, errorCode), Toast.LENGTH_SHORT).show();
@@ -518,6 +627,8 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     @Override
     public void onCaptureWorking() {
         Log.d(TAG,"onCaptureWorking()");
+        cameraStatus.busy = true;
+        updateUIElements();
     }
 
     @Override
@@ -528,24 +639,17 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     @Override
     public void onCaptureFinish(String[] filePaths) {
         Log.i(TAG, "onCaptureFinish, filePaths = " + ((filePaths == null) ? "null" : Arrays.toString(filePaths)));
-        progressBar.setVisibility(View.INVISIBLE);
-        modeImageView.setVisibility(View.VISIBLE);
-        shutterButton.setVisibility(View.VISIBLE);
+        cameraStatus.busy = false;
+        updateUIElements();
     }
 
     @Override
     public void onCaptureTimeChanged(long captureTime) {
         Log.d(TAG,"onCaptureTimeChanged()");
-        progressBar.setVisibility(View.INVISIBLE);
-        modeImageView.setVisibility(View.VISIBLE);
-        shutterButton.setVisibility(View.VISIBLE);
     }
 
     @Override
     public void onCaptureCountChanged(int captureCount) {
         Log.d(TAG,"onCaptureCountChanged()");
-        progressBar.setVisibility(View.INVISIBLE);
-        modeImageView.setVisibility(View.VISIBLE);
-        shutterButton.setVisibility(View.VISIBLE);
     }
 }

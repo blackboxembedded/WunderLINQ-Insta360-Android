@@ -19,8 +19,5 @@ package com.blackboxembedded.wunderlinqinsta360;
 
 public class CameraStatus {
     public boolean busy;
-    public byte mode;
-    public boolean wifiEnabled;
-    public boolean previewAvailable;
-    public boolean openGoPro;
+    public int mode;
 }

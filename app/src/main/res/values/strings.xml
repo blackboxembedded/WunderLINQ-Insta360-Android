@@ -26,12 +26,17 @@
     <string name="negative_btconnect_alert_title">Bluetooth Connect Request Denied</string>
     <string name="negative_btconnect_alert_body">Location Permissions are required for Bluetooth scanning</string>
 
-    <string name="task_title_photo">Take Photo</string>
     <string name="task_title_start_record">Start Video Recording</string>
     <string name="task_title_stop_record">Stop Video Recording</string>
+    <string name="task_title_start_hdr">Start HDR Recording</string>
+    <string name="task_title_stop_hdr">Stop HDR Recording</string>
+    <string name="task_title_start_interval">Start Interval Recording</string>
+    <string name="task_title_stop_interval">Stop Interval Recording</string>
     <string name="task_title_start_timelapse">Start Timelapse Recording</string>
     <string name="task_title_stop_timelapse">Stop Timelapse Recording</string>
     <string name="pref_highlightColor_title">Highlight Color</string>
+
+    <string name="sd_card_error">SD Card: Not insert or Not enough free space</string>
 
     <!-- Preference Titles -->
     <string name="title_activity_settings">Settings</string>
