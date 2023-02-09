@@ -55,7 +55,7 @@ import com.arashivision.sdkmedia.player.listener.PlayerViewListener;
 
 import java.util.Arrays;
 
-public class DeviceControlActivity extends BaseObserveCameraActivity implements View.OnTouchListener, ICaptureStatusListener, IPreviewStatusListener {
+public class DeviceControlActivity extends BaseObserveCameraActivity implements View.OnTouchListener, ICaptureStatusListener {
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
@@ -71,7 +71,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     private ProgressBar progressBar;
     private ImageView modeImageView;
     private Button shutterButton;
-    PopUpClass popUpClass;
 
     private int highlightColor;
 
@@ -243,8 +242,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         cameraStatus.mode = 0;
         // Capture Status Callback
         InstaCameraManager.getInstance().setCaptureStatusListener(this);
-
-        InstaCameraManager.getInstance().setPreviewStatusChangedListener(this);
     }
 
     @Override
@@ -474,10 +471,10 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     private void nextMode() {
         //Next Camera Mode
         if(!cameraStatus.busy) {
-            if (cameraStatus.mode < 3) {
-                cameraStatus.mode = cameraStatus.mode + 1;
-            } else {
+            if (cameraStatus.mode == 3) {
                 cameraStatus.mode = 0;
+            } else {
+                cameraStatus.mode = cameraStatus.mode + 1;
             }
         }
         updateUIElements();
@@ -486,10 +483,10 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     private void previousMode() {
         //Previous Camera Mode
         if(!cameraStatus.busy) {
-            if (cameraStatus.mode > 0) {
-                cameraStatus.mode = cameraStatus.mode - 1;
+            if (cameraStatus.mode == 0) {
+                cameraStatus.mode = 3;
             } else {
-                cameraStatus.mode = 0;
+                cameraStatus.mode = cameraStatus.mode - 1;
             }
         }
         updateUIElements();
@@ -571,17 +568,11 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     };
 
     private void startPreview() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                // Stuff that updates the UI
-                progressBar.setVisibility(View.INVISIBLE);
-                modeImageView.setVisibility(View.VISIBLE);
-                shutterButton.setVisibility(View.VISIBLE);
-                popUpClass = new PopUpClass();
-                popUpClass.showPopupWindow(getLifecycle(),view);
-            }
-        });
+        // Stuff that updates the UI
+        progressBar.setVisibility(View.INVISIBLE);
+        modeImageView.setVisibility(View.VISIBLE);
+        shutterButton.setVisibility(View.VISIBLE);
+        startActivity(new Intent(DeviceControlActivity.this, PreviewActivity.class));
     }
 
     private boolean checkSdCardEnabled() {
@@ -654,23 +645,5 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     @Override
     public void onCaptureCountChanged(int captureCount) {
         Log.d(TAG,"onCaptureCountChanged()");
-    }
-
-    @Override
-    public void onOpened() {
-        // Preview stream is on and can be played
-        InstaCameraManager.getInstance().setStreamEncode();
-    }
-
-    @Override
-    public void onIdle() {
-        // Preview Stopped
-        Log.d(TAG,"Preview Stopped");
-    }
-
-    @Override
-    public void onError() {
-        // Preview Failed
-        Log.d(TAG,"Preview Failed");
     }
 }
