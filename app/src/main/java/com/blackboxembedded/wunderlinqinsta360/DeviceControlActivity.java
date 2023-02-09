@@ -131,7 +131,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 finish();
             } else if (BluetoothLeService.ACTION_NOTFICATION_ENABLED.equals(action)) {
-                mBluetoothLeService.requestCameraStatus();
+                mBluetoothLeService.requestCameraWifi();
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 Bundle bd = intent.getExtras();
                 if(bd != null){
@@ -142,16 +142,16 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                             Log.d(TAG, "UUID: " + bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) + " DATA: " + characteristicValue);
 
                             if(response == null){
-                                if(data[0] == (byte)0xFF ){
-                                    response = new byte[255];
+                                if(data[0] == (byte)0x44 ){
+                                    response = new byte[68];
                                     System.arraycopy(data, 0, response, 0, data.length);
                                     responsePosition = responsePosition + data.length;
                                 }
                             } else {
-                                if (responsePosition != 255){
+                                if (responsePosition != 68){
                                     System.arraycopy(data, 0, response, responsePosition, data.length);
                                     responsePosition = responsePosition + data.length;
-                                    if (responsePosition == 255) {
+                                    if (responsePosition == 68) {
                                         Log.d(TAG, Utils.ByteArraytoHex(response));
 
                                         mBluetoothLeService.command2();
@@ -159,7 +159,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                                     }
                                 } else {
                                     if (data[0] == (byte) 0x12) {
-                                        //mBluetoothLeService.command3();
                                         connectToWifi(mDeviceName + ".OSC","88888888");
                                     } else if (data[0] == (byte) 0x07) {
                                         //Do nothing

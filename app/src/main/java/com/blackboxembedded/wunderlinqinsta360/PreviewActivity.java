@@ -1,7 +1,5 @@
 package com.blackboxembedded.wunderlinqinsta360;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
