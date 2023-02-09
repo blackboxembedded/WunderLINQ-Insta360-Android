@@ -763,15 +763,13 @@ public class BluetoothLeService extends Service {
     }
 
     // BLE Commands
-    public void setCommand(byte[] command){
+    public void requestCameraWifi(){
         if (commandCharacteristic != null) {
             if (!isNotifying(commandResponseCharacteristic)) {
                 setNotify(commandResponseCharacteristic,true);
             } else {
-                byte[] fullcommand = new byte[command.length + 1];
-                System.arraycopy(new byte[]{(byte) command.length}, 0, fullcommand, 0, 1);
-                System.arraycopy(command, 0, fullcommand, 1, command.length);
-                writeCharacteristic(commandCharacteristic, fullcommand, WriteType.WITH_RESPONSE);
+                byte[] command = {0x14, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x08, 0x00, 0x02, 0x00, 0x00, 0x00, (byte)0x80, 0x00, 0x00, 0x0a, 0x02, 0x24, 0x30};
+                writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
             }
         }
     }
