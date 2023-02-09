@@ -142,16 +142,16 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                             Log.d(TAG, "UUID: " + bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) + " DATA: " + characteristicValue);
 
                             if(response == null){
-                                if(data[0] == (byte)0x44 ){
-                                    response = new byte[68];
+                                if(data[0] > (byte)0x20){
+                                    response = new byte[(byte)data[0]];
                                     System.arraycopy(data, 0, response, 0, data.length);
                                     responsePosition = responsePosition + data.length;
                                 }
                             } else {
-                                if (responsePosition != 68){
+                                if (responsePosition != response.length){
                                     System.arraycopy(data, 0, response, responsePosition, data.length);
                                     responsePosition = responsePosition + data.length;
-                                    if (responsePosition == 68) {
+                                    if (responsePosition == response.length) {
                                         Log.d(TAG, Utils.ByteArraytoHex(response));
 
                                         mBluetoothLeService.command2();
@@ -161,7 +161,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                                     if (data[0] == (byte) 0x12) {
                                         connectToWifi(mDeviceName + ".OSC","88888888");
                                     } else if (data[0] == (byte) 0x07) {
-                                        //Do nothing
+                                        //Do Nothing
                                     }
                                 }
                             }
@@ -171,7 +171,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             }
         }
     };
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -533,6 +532,10 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             connectivityManager.requestNetwork(networkRequest, networkCallback);
         }
     }
+    private boolean isCameraConnected() {
+        return InstaCameraManager.getInstance().getCameraConnectedType() != InstaCameraManager.CONNECT_TYPE_NONE;
+    }
+
 
     private ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
         @Override
