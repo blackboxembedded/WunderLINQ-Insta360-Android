@@ -471,7 +471,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             public void run() {
                 updateUIElements();
             }
-        }, 5000);
+        }, 3000);
 
     }
 
