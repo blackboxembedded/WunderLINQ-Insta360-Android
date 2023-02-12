@@ -33,10 +33,12 @@ import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 
 import androidx.annotation.NonNull;
 
+import android.os.Looper;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -463,7 +465,14 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                 }
                 break;
         }
-        updateUIElements();
+        final Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                updateUIElements();
+            }
+        }, 5000);
+
     }
 
     private void nextMode() {
