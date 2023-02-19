@@ -74,7 +74,6 @@ public class DeviceScanActivity extends AppCompatActivity {
     private static final int SETTINGS_CHECK = 10;
 
     private ListView listView;
-    private Menu menu;
 
     private int lastPosition = 0;
     private int highlightColor;
