@@ -73,7 +73,8 @@ public class DeviceScanActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_FINE_LOCATION = 102;
     private static final int SETTINGS_CHECK = 10;
 
-    ListView listView;
+    private ListView listView;
+    private Menu menu;
 
     private int lastPosition = 0;
     private int highlightColor;
@@ -198,6 +199,11 @@ public class DeviceScanActivity extends AppCompatActivity {
                 //Launch Settings
                 Intent settingsIntent = new Intent(this, SettingsActivity.class);
                 startActivityForResult(settingsIntent, SETTINGS_CHECK);
+                return true;
+            case R.id.action_about:
+                //Launch Settings
+                Intent aboutIntent = new Intent(this, AboutActivity.class);
+                startActivity(aboutIntent);
                 return true;
         }
         return super.onOptionsItemSelected(item);
