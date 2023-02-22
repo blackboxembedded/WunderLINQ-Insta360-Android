@@ -779,7 +779,7 @@ public class BluetoothLeService extends Service {
             if (!isNotifying(commandResponseCharacteristic)) {
                 setNotify(commandResponseCharacteristic,true);
             } else {
-                byte[] command = {0x1c, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x08, 0x00, 0x02, 0x01, 0x00, 0x00, (byte)0x80, 0x00, 0x00,0x0a, 0x0a, 0x0b, 0x0f, 0x13, 0x16, 0x1e, 0x24, 0x25, 0x2b, 0x30, 0x43};
+                byte[] command = {0x1c, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x08, 0x00, 0x02, 0x01, 0x00, 0x00, (byte)0x80, 0x00, 0x00, 0x0a, 0x0a, 0x0b, 0x0f, 0x13, 0x16, 0x1e, 0x24, 0x25, 0x2b, 0x30, 0x43};
                 writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
             }
         }
@@ -802,9 +802,84 @@ public class BluetoothLeService extends Service {
                 setNotify(commandResponseCharacteristic,true);
             } else {
                 byte[] command = {(byte)0xff,0x0c,0x01,0x01,0x00,0x00,(byte)0xcc};
+                //writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
+            }
+        }
+    }
+
+    void takePhoto(){
+        sendCommand(createCommand((byte) 0x04, (byte) 0x03, null));
+    }
+    void stopVideo(){
+        sendCommand(createCommand((byte) 0x04, (byte) 0x05, null));
+    }
+    void startVideoHDR(){
+        sendCommand(createCommand((byte) 0x04, (byte) 0x33, null));
+    }
+    void startVideoBullet(){
+        sendCommand(createCommand((byte) 0x04, (byte) 0x29, null));
+    }
+    void startVideoTimeshift(){
+        sendCommand(createCommand((byte) 0x04, (byte) 0x3D, null));
+    }
+    void startVideoLoop(){
+        sendCommand(createCommand((byte) 0x04, (byte) 0x45, null));
+    }
+    void factoryReset(){
+        sendCommand(createCommand((byte) 0x04, (byte) 0x39, null));
+    }
+    void formatSD(){
+        sendCommand(createCommand((byte) 0x04, (byte) 0x18, null));
+    }
+
+    void requestStatus(){
+        //byte[] pBuffer = new byte[] {0x0a, 0x02, 0x24, 0x30};
+        byte[] pBuffer = new byte[] {0x0a,0x06,0x0b,0x14,0x03,0x42,0x1b,0x41};
+        sendCommand(createCommand((byte) 0x04, (byte) 0x08, pBuffer));
+    }
+
+    public void sendCommand(byte[] command){
+        if (commandCharacteristic != null) {
+            if (!isNotifying(commandResponseCharacteristic)) {
+                setNotify(commandResponseCharacteristic,true);
+            } else {
                 writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
             }
         }
+    }
+    public byte[] createCommand(byte mode, byte command, byte[] protoBuffer){
+        byte[] builtCommand = new byte[200];
+        builtCommand[1] = 0;
+        builtCommand[2] = 0;
+        builtCommand[3] = 0;
+        builtCommand[4] = mode;
+        builtCommand[5] = 0;
+        builtCommand[6] = 0;
+        int length = 7;
+
+        if(command != 0xFF){
+            builtCommand[7] = command;
+            builtCommand[8] = 0;
+
+            builtCommand[9] = (byte) ((512 & 0xFF00) >> 8);
+            builtCommand[10] = (byte) (512 & 0x00FF);
+            builtCommand[11] = 0x00;
+            builtCommand[12] = 0;
+            builtCommand[13] = (byte)0x80;
+            builtCommand[14] = 0;
+            builtCommand[15] = 0;
+            length += 9;
+        }
+
+        if (protoBuffer != null) {
+            for (int i = 0; i < protoBuffer.length; i++) {
+                builtCommand[i + 16] = protoBuffer[i];
+            }
+            length += protoBuffer.length;
+        }
+
+        builtCommand[0] = (byte) length;
+        return builtCommand;
     }
 
 }

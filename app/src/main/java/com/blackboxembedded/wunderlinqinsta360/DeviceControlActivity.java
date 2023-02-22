@@ -133,7 +133,8 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 finish();
             } else if (BluetoothLeService.ACTION_NOTFICATION_ENABLED.equals(action)) {
-                mBluetoothLeService.requestCameraWifi();
+                //mBluetoothLeService.requestCameraWifi();
+                mBluetoothLeService.requestStatus();
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 Bundle bd = intent.getExtras();
                 if(bd != null){
@@ -400,6 +401,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         progressBar.setVisibility(View.INVISIBLE);
         modeImageView.setVisibility(View.VISIBLE);
         shutterButton.setVisibility(View.VISIBLE);
+        mBluetoothLeService.requestStatus();
     }
 
     private void upKey(){
@@ -418,49 +420,55 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         switch (cameraStatus.mode) {
             case 0:
                 if (cameraStatus.busy) {
-                    InstaCameraManager.getInstance().stopNormalRecord();
+                    //InstaCameraManager.getInstance().stopNormalRecord();
+                    mBluetoothLeService.stopVideo();
                     cameraStatus.busy = false;
                 } else {
                     if (checkSdCardEnabled()) {
                         cameraStatus.busy = true;
-                        InstaCameraManager.getInstance().startNormalRecord();
+                        //InstaCameraManager.getInstance().startNormalRecord();
+                        mBluetoothLeService.startVideoLoop();
                     }
                 }
                 break;
             case 1:
                 if (cameraStatus.busy) {
-                    InstaCameraManager.getInstance().stopHDRRecord();
+                    //InstaCameraManager.getInstance().stopHDRRecord();
+                    mBluetoothLeService.stopVideo();
                     cameraStatus.busy = false;
                 } else {
                     if (checkSdCardEnabled()) {
                         cameraStatus.busy = true;
-                        InstaCameraManager.getInstance().startHDRRecord();
+                        //InstaCameraManager.getInstance().startHDRRecord();
+                        mBluetoothLeService.startVideoHDR();
                     }
                 }
                 break;
             case 2:
                 if (cameraStatus.busy) {
-                    InstaCameraManager.getInstance().stopIntervalShooting();
+                    //InstaCameraManager.getInstance().stopIntervalShooting();
+                    mBluetoothLeService.stopVideo();
                     cameraStatus.busy = false;
                 } else {
                     if (checkSdCardEnabled()) {
-                        if (checkSdCardEnabled()) {
-                            cameraStatus.busy = true;
-                            InstaCameraManager.getInstance().setIntervalShootingTime(3000);
-                            InstaCameraManager.getInstance().startIntervalShooting();
-                        }
+                        cameraStatus.busy = true;
+                        //InstaCameraManager.getInstance().setIntervalShootingTime(3000);
+                        //InstaCameraManager.getInstance().startIntervalShooting();
+                        mBluetoothLeService.startVideoBullet();
                     }
                 }
                 break;
             case 3:
                 if (cameraStatus.busy) {
-                    InstaCameraManager.getInstance().stopTimeLapse();
+                    //InstaCameraManager.getInstance().stopTimeLapse();
+                    mBluetoothLeService.stopVideo();
                     cameraStatus.busy = false;
                 } else {
                     if (checkSdCardEnabled()) {
                         cameraStatus.busy = true;
-                        InstaCameraManager.getInstance().setTimeLapseInterval(500);
-                        InstaCameraManager.getInstance().startTimeLapse();
+                        //InstaCameraManager.getInstance().setTimeLapseInterval(500);
+                        //InstaCameraManager.getInstance().startTimeLapse();
+                        mBluetoothLeService.startVideoTimeshift();
                     }
                 }
                 break;
