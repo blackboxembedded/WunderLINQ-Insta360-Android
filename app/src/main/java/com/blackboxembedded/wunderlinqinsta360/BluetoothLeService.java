@@ -79,6 +79,9 @@ public class BluetoothLeService extends Service {
     private static BluetoothGattCharacteristic commandCharacteristic;
     private static BluetoothGattCharacteristic commandResponseCharacteristic;
 
+    private byte[] response;
+    private int responsePosition = 0;
+
     /**
      * GATT Status constants
      */
@@ -391,9 +394,7 @@ public class BluetoothLeService extends Service {
                 characteristic.getUuid().toString());
 
         if (characteristic.getUuid().equals(UUIDDatabase.UUID_INSTA360_COMMANDRESPONSE_CHARACTERISTIC)) {
-            final Intent intent = new Intent(ACTION_DATA_AVAILABLE);
-            intent.putExtras(mBundle);
-            sendBroadcast(intent);
+            processResponse(data);
         } else {
             /*
              * Sending the broad cast so that it can be received on registered
@@ -763,50 +764,6 @@ public class BluetoothLeService extends Service {
     }
 
     // BLE Commands
-    public void requestCameraWifi(){
-        if (commandCharacteristic != null) {
-            if (!isNotifying(commandResponseCharacteristic)) {
-                setNotify(commandResponseCharacteristic,true);
-            } else {
-                byte[] command = {0x14, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x08, 0x00, 0x02, 0x00, 0x00, 0x00, (byte)0x80, 0x00, 0x00, 0x0a, 0x02, 0x24, 0x30};
-                writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
-            }
-        }
-    }
-
-    public void requestCameraStatus(){
-        if (commandCharacteristic != null) {
-            if (!isNotifying(commandResponseCharacteristic)) {
-                setNotify(commandResponseCharacteristic,true);
-            } else {
-                byte[] command = {0x1c, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x08, 0x00, 0x02, 0x01, 0x00, 0x00, (byte)0x80, 0x00, 0x00, 0x0a, 0x0a, 0x0b, 0x0f, 0x13, 0x16, 0x1e, 0x24, 0x25, 0x2b, 0x30, 0x43};
-                writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
-            }
-        }
-    }
-
-    public void command2(){
-        if (commandCharacteristic != null) {
-            if (!isNotifying(commandResponseCharacteristic)) {
-                setNotify(commandResponseCharacteristic,true);
-            } else {
-                byte[] command = {0x36,0x00,0x00,0x00,0x04,0x00,0x00,0x27,0x00,0x02,0x02,0x00,0x00,(byte)0x80,0x00,0x00,0x0a,0x24,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x2d,0x34,0x62,0x33,0x61,0x2d,0x33,0x64,0x37,0x31,0x2d,0x66,0x66,0x66,0x66,0x2d,0x66,0x66,0x66,0x66,0x65,0x66,0x30,0x35,0x61,0x63,0x34,0x61};
-                writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
-            }
-        }
-    }
-
-    public void command3(){
-        if (commandCharacteristic != null) {
-            if (!isNotifying(commandResponseCharacteristic)) {
-                setNotify(commandResponseCharacteristic,true);
-            } else {
-                byte[] command = {(byte)0xff,0x0c,0x01,0x01,0x00,0x00,(byte)0xcc};
-                //writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
-            }
-        }
-    }
-
     void takePhoto(){
         sendCommand(createCommand((byte) 0x04, (byte) 0x03, null));
     }
@@ -832,10 +789,35 @@ public class BluetoothLeService extends Service {
         sendCommand(createCommand((byte) 0x04, (byte) 0x18, null));
     }
 
+    public void requestCameraWifi(){
+        byte[] pBuffer = new byte[] {0x0a, 0x01, 0x24};
+        sendCommand(createCommand((byte) 0x04, (byte) 0x08, pBuffer));
+    }
+
+    public void requestCameraStatus(){
+        byte[] pBuffer = new byte[] {0x0a, 0x0a, 0x0b, 0x0f, 0x13, 0x16, 0x1e, 0x24, 0x25, 0x2b, 0x30, 0x43};
+        sendCommand(createCommand((byte) 0x04, (byte) 0x08, pBuffer));
+    }
+
     void requestStatus(){
-        //byte[] pBuffer = new byte[] {0x0a, 0x02, 0x24, 0x30};
         byte[] pBuffer = new byte[] {0x0a,0x06,0x0b,0x14,0x03,0x42,0x1b,0x41};
         sendCommand(createCommand((byte) 0x04, (byte) 0x08, pBuffer));
+    }
+
+    public void command2(){
+        byte[] pBuffer = new byte[] {0x0a,0x24,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x2d,0x34,0x62,0x33,0x61,0x2d,0x33,0x64,0x37,0x31,0x2d,0x66,0x66,0x66,0x66,0x2d,0x66,0x66,0x66,0x66,0x65,0x66,0x30,0x35,0x61,0x63,0x34,0x61};
+        sendCommand(createCommand((byte) 0x04, (byte) 0x08, pBuffer));
+    }
+
+    public void unknownCommand(){
+        if (commandCharacteristic != null) {
+            if (!isNotifying(commandResponseCharacteristic)) {
+                setNotify(commandResponseCharacteristic,true);
+            } else {
+                byte[] command = {(byte)0xff,0x0c,0x01,0x01,0x00,0x00,(byte)0xcc};
+                writeCharacteristic(commandCharacteristic, command, WriteType.WITH_RESPONSE);
+            }
+        }
     }
 
     public void sendCommand(byte[] command){
@@ -860,7 +842,6 @@ public class BluetoothLeService extends Service {
         if(command != 0xFF){
             builtCommand[7] = command;
             builtCommand[8] = 0;
-
             builtCommand[9] = (byte) ((512 & 0xFF00) >> 8);
             builtCommand[10] = (byte) (512 & 0x00FF);
             builtCommand[11] = 0x00;
@@ -882,4 +863,54 @@ public class BluetoothLeService extends Service {
         return builtCommand;
     }
 
+    void processResponse(byte[] data){
+        //Log.d(TAG,"New data: " + Utils.ByteArraytoHex(data));
+        if(response == null){
+            response = new byte[(data[0] & 0xFF)];
+            if (data[0] >= data.length) {
+                System.arraycopy(data, 0, response, 0, data.length);
+                responsePosition = data.length;
+                if (data[0] == data.length) {
+                    Log.d(TAG, "Complete Message: " + Utils.ByteArraytoHex(response));
+                    Bundle mBundle = new Bundle();
+                    mBundle.putByteArray(EXTRA_BYTE_VALUE,
+                            data);
+                    final Intent intent = new Intent(ACTION_DATA_AVAILABLE);
+                    intent.putExtras(mBundle);
+                    sendBroadcast(intent);
+                    response = null;
+                    responsePosition = 0;
+                } else {
+                    Log.d(TAG,"Message Start: " + Utils.ByteArraytoHex(data));
+                }
+            } else {
+                Log.d(TAG, "Unknown Part: " + Utils.ByteArraytoHex(data));
+                response = null;
+                responsePosition = 0;
+            }
+        } else {
+            if (responsePosition != response.length){
+                if (response.length - responsePosition >= data.length) {
+                    Log.d(TAG,"Message Part: " + Utils.ByteArraytoHex(data));
+                    System.arraycopy(data, 0, response, responsePosition, data.length);
+                    responsePosition = responsePosition + data.length;
+                    Log.d(TAG,"Current Message: " + Utils.ByteArraytoHex(response));
+                } else {
+                    Log.d(TAG, "Incomplete Message: " + Utils.ByteArraytoHex(response));
+                    response = null;
+                    responsePosition = 0;
+                }
+            } else {
+                Log.d(TAG, "Built Message: " + Utils.ByteArraytoHex(response));
+                Bundle mBundle = new Bundle();
+                mBundle.putByteArray(EXTRA_BYTE_VALUE,
+                        data);
+                final Intent intent = new Intent(ACTION_DATA_AVAILABLE);
+                intent.putExtras(mBundle);
+                sendBroadcast(intent);
+                response = null;
+                responsePosition = 0;
+            }
+        }
+    }
 }

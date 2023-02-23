@@ -6,14 +6,19 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
+import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener;
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener;
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder;
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView;
 import com.arashivision.sdkmedia.player.config.InstaStabType;
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener;
+
+import java.util.Arrays;
 
 public class PreviewActivity extends BaseObserveCameraActivity implements IPreviewStatusListener {
 
@@ -49,6 +54,8 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         //Setup Media Player
         mVideoLayout = findViewById(R.id.video_layout);
         mVideoLayout.setLifecycle(getLifecycle());
+
+        InstaCameraManager.getInstance().openCamera(InstaCameraManager.CONNECT_TYPE_WIFI);
 
         InstaCameraManager.getInstance().startPreviewStream(InstaCameraManager.getInstance().getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL).get(0));
         mVideoLayout.setPlayerViewListener(new PlayerViewListener() {
@@ -139,6 +146,26 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
     public void onError() {
         // Preview Failed
         Log.d(TAG,"Preview Failed");
+    }
+
+    @Override
+    public void onCameraStatusChanged(boolean enabled) {
+        super.onCameraStatusChanged(enabled);
+        if (enabled) {
+            Log.d(TAG,"Camera Enabled");
+        } else {
+            Log.d(TAG,"Camera NOT Enabled");
+        }
+    }
+
+    @Override
+    public void onCameraConnectError(int errorCode) {
+        super.onCameraConnectError(errorCode);
+        Log.d(TAG,"onCameraConnectError: " + errorCode);
+    }
+
+    private boolean isCameraConnected() {
+        return InstaCameraManager.getInstance().getCameraConnectedType() != InstaCameraManager.CONNECT_TYPE_NONE;
     }
 
     private void leftKey(){ finish(); }

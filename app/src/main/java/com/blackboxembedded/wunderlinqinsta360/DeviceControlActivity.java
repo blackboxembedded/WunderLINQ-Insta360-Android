@@ -48,16 +48,10 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.net.wifi.WifiManager;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
-import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener;
-import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener;
-import com.arashivision.sdkmedia.player.listener.PlayerViewListener;
 
-import java.util.Arrays;
-
-public class DeviceControlActivity extends BaseObserveCameraActivity implements View.OnTouchListener, ICaptureStatusListener {
+public class DeviceControlActivity extends BaseObserveCameraActivity implements View.OnTouchListener {
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
@@ -82,9 +76,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     private String password;
     private WifiManager wifiManager;
     ConnectivityManager connectivityManager;
-
-    private byte[] response;
-    private int responsePosition = 0;
 
     // Code to manage Service lifecycle.
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -133,42 +124,18 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 finish();
             } else if (BluetoothLeService.ACTION_NOTFICATION_ENABLED.equals(action)) {
-                //mBluetoothLeService.requestCameraWifi();
                 mBluetoothLeService.requestStatus();
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 Bundle bd = intent.getExtras();
                 if(bd != null){
-                    if(bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) != null) {
-                        if (bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE).contains(GattAttributes.INSTA360_COMMANDRESPONSE_CHARACTERISTIC)) {
-                            byte[] data = bd.getByteArray(BluetoothLeService.EXTRA_BYTE_VALUE);
-                            String characteristicValue = Utils.ByteArraytoHex(data);
-                            Log.d(TAG, "UUID: " + bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) + " DATA: " + characteristicValue);
-
-                            if(response == null){
-                                if(data[0] > (byte)0x20){
-                                    response = new byte[(byte)data[0]];
-                                    System.arraycopy(data, 0, response, 0, data.length);
-                                    responsePosition = responsePosition + data.length;
-                                }
-                            } else {
-                                if (responsePosition != response.length){
-                                    System.arraycopy(data, 0, response, responsePosition, data.length);
-                                    responsePosition = responsePosition + data.length;
-                                    if (responsePosition == response.length) {
-                                        Log.d(TAG, Utils.ByteArraytoHex(response));
-
-                                        mBluetoothLeService.command2();
-                                        mBluetoothLeService.command3();
-                                    }
-                                } else {
-                                    if (data[0] == (byte) 0x12) {
-                                        connectToWifi(mDeviceName + ".OSC","88888888");
-                                    } else if (data[0] == (byte) 0x07) {
-                                        //Do Nothing
-                                    }
-                                }
-                            }
-                        }
+                    byte[] data = bd.getByteArray(BluetoothLeService.EXTRA_BYTE_VALUE);
+                    String characteristicValue = Utils.ByteArraytoHex(data);
+                    Log.d(TAG, "Message Received: " + " DATA: " + characteristicValue);
+                    if (data[4] == 0x04){
+                        //Status message Received
+                        updateUIElements();
+                    } else if (data[4] == 0x05){
+                        //Heartbeat from camera?
                     }
                 }
             }
@@ -241,8 +208,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         cameraStatus = new CameraStatus();
         cameraStatus.busy = false;
         cameraStatus.mode = 0;
-        // Capture Status Callback
-        InstaCameraManager.getInstance().setCaptureStatusListener(this);
     }
 
     @Override
@@ -338,23 +303,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
 
     private void updateUIElements(){
         Log.d(TAG,"updateUIElements()");
-        int type = InstaCameraManager.getInstance().getCurrentCaptureType();
-        if(type == -1){
-            cameraStatus.busy = false;
-        } else if(type == 1003){
-            cameraStatus.busy = true;
-            cameraStatus.mode = 0;
-        } else if(type == 1004){
-            cameraStatus.busy = true;
-            cameraStatus.mode = 1;
-        } else if(type == 1002){
-            cameraStatus.busy = true;
-            cameraStatus.mode = 2;
-        } else if(type == 1005){
-            cameraStatus.busy = true;
-            cameraStatus.mode = 3;
-        }
-        Log.d(TAG,"CAPTURE_TYPE: " + type);
         switch (cameraStatus.mode) {
             case 0:
                 //Normal
@@ -420,56 +368,38 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         switch (cameraStatus.mode) {
             case 0:
                 if (cameraStatus.busy) {
-                    //InstaCameraManager.getInstance().stopNormalRecord();
                     mBluetoothLeService.stopVideo();
                     cameraStatus.busy = false;
                 } else {
-                    if (checkSdCardEnabled()) {
-                        cameraStatus.busy = true;
-                        //InstaCameraManager.getInstance().startNormalRecord();
-                        mBluetoothLeService.startVideoLoop();
-                    }
+                    cameraStatus.busy = true;
+                    mBluetoothLeService.startVideoLoop();
                 }
                 break;
             case 1:
                 if (cameraStatus.busy) {
-                    //InstaCameraManager.getInstance().stopHDRRecord();
                     mBluetoothLeService.stopVideo();
                     cameraStatus.busy = false;
                 } else {
-                    if (checkSdCardEnabled()) {
-                        cameraStatus.busy = true;
-                        //InstaCameraManager.getInstance().startHDRRecord();
-                        mBluetoothLeService.startVideoHDR();
-                    }
+                    cameraStatus.busy = true;
+                    mBluetoothLeService.startVideoHDR();
                 }
                 break;
             case 2:
                 if (cameraStatus.busy) {
-                    //InstaCameraManager.getInstance().stopIntervalShooting();
                     mBluetoothLeService.stopVideo();
                     cameraStatus.busy = false;
                 } else {
-                    if (checkSdCardEnabled()) {
-                        cameraStatus.busy = true;
-                        //InstaCameraManager.getInstance().setIntervalShootingTime(3000);
-                        //InstaCameraManager.getInstance().startIntervalShooting();
-                        mBluetoothLeService.startVideoBullet();
-                    }
+                    cameraStatus.busy = true;
+                    mBluetoothLeService.startVideoBullet();
                 }
                 break;
             case 3:
                 if (cameraStatus.busy) {
-                    //InstaCameraManager.getInstance().stopTimeLapse();
                     mBluetoothLeService.stopVideo();
                     cameraStatus.busy = false;
                 } else {
-                    if (checkSdCardEnabled()) {
-                        cameraStatus.busy = true;
-                        //InstaCameraManager.getInstance().setTimeLapseInterval(500);
-                        //InstaCameraManager.getInstance().startTimeLapse();
-                        mBluetoothLeService.startVideoTimeshift();
-                    }
+                    cameraStatus.busy = true;
+                    mBluetoothLeService.startVideoTimeshift();
                 }
                 break;
         }
@@ -549,10 +479,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             connectivityManager.requestNetwork(networkRequest, networkCallback);
         }
     }
-    private boolean isCameraConnected() {
-        return InstaCameraManager.getInstance().getCameraConnectedType() != InstaCameraManager.CONNECT_TYPE_NONE;
-    }
-
 
     private ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
         @Override
@@ -560,9 +486,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             super.onAvailable(network);
             Log.e(TAG,"onAvailable");
             connectivityManager.bindProcessToNetwork(network);
-
-            InstaCameraManager.getInstance().openCamera(InstaCameraManager.CONNECT_TYPE_WIFI);
-
+            startActivity(new Intent(DeviceControlActivity.this, PreviewActivity.class));
         }
 
         @Override
@@ -591,78 +515,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         progressBar.setVisibility(View.INVISIBLE);
         modeImageView.setVisibility(View.VISIBLE);
         shutterButton.setVisibility(View.VISIBLE);
-        startActivity(new Intent(DeviceControlActivity.this, PreviewActivity.class));
-    }
-
-    private boolean checkSdCardEnabled() {
-        if (!InstaCameraManager.getInstance().isSdCardEnabled()) {
-            Toast.makeText(this, R.string.sd_card_error, Toast.LENGTH_SHORT).show();
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public void onCameraStatusChanged(boolean enabled) {
-        super.onCameraStatusChanged(enabled);
-        if (enabled) {
-            Log.d(TAG,"Camera Enabled");
-            progressBar.setVisibility(View.INVISIBLE);
-            modeImageView.setVisibility(View.VISIBLE);
-            shutterButton.setVisibility(View.VISIBLE);
-            updateUIElements();
-        } else {
-            //CameraBindNetworkManager.getInstance().unbindNetwork();
-            //NetworkManager.getInstance().clearBindProcess();
-            Log.d(TAG,"Camera NOT Enabled");
-        }
-    }
-
-    @Override
-    public void onCameraConnectError(int errorCode) {
-        super.onCameraConnectError(errorCode);
-        Log.d(TAG,"onCameraConnectError: " + errorCode);
-        //CameraBindNetworkManager.getInstance().unbindNetwork();
-        //Toast.makeText(this, getResources().getString(R.string.main_toast_camera_connect_error, errorCode), Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onCameraSensorModeChanged(int cameraSensorMode) {
-        super.onCameraSensorModeChanged(cameraSensorMode);
-        Log.d(TAG,"Sensor Mode: " + cameraSensorMode);
-    }
-
-    @Override
-    public void onCaptureStarting() {
-        Log.d(TAG,"onCaptureStarting()");
-    }
-
-    @Override
-    public void onCaptureWorking() {
-        Log.d(TAG,"onCaptureWorking()");
-        cameraStatus.busy = true;
-        updateUIElements();
-    }
-
-    @Override
-    public void onCaptureStopping() {
-        Log.d(TAG,"onCaptureStopping()");
-    }
-
-    @Override
-    public void onCaptureFinish(String[] filePaths) {
-        Log.i(TAG, "onCaptureFinish, filePaths = " + ((filePaths == null) ? "null" : Arrays.toString(filePaths)));
-        cameraStatus.busy = false;
-        updateUIElements();
-    }
-
-    @Override
-    public void onCaptureTimeChanged(long captureTime) {
-        Log.d(TAG,"onCaptureTimeChanged()");
-    }
-
-    @Override
-    public void onCaptureCountChanged(int captureCount) {
-        Log.d(TAG,"onCaptureCountChanged()");
+        connectToWifi(mDeviceName + ".OSC","88888888");
     }
 }
