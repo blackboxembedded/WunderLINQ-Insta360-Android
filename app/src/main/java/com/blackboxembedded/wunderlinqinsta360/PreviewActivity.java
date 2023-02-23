@@ -14,16 +14,15 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.View;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
-import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener;
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener;
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder;
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView;
@@ -35,9 +34,6 @@ import java.util.Arrays;
 public class PreviewActivity extends BaseObserveCameraActivity implements IPreviewStatusListener {
 
     private final static String TAG = PreviewActivity.class.getSimpleName();
-
-    private String SSID;
-    private String password;
     private WifiManager wifiManager;
     ConnectivityManager connectivityManager;
     private String mDeviceName;
@@ -64,10 +60,13 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG,"onCreate()");
         setContentView(R.layout.camera_preview_activity);
 
         final Intent intent = getIntent();
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
+
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
 
         // Keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -90,14 +89,15 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
 
         InstaCameraManager.getInstance().setPreviewStatusChangedListener(this);
 
-        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        mVideoLayout.prepare(createParams());
+
+        connectToWifi(mDeviceName + ".OSC","88888888");
     }
 
     @Override
     protected void onResume() {
         Log.d(TAG,"onResume()");
         super.onResume();
-        connectToWifi(mDeviceName + ".OSC","88888888");
     }
 
     @Override
@@ -112,6 +112,14 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
             InstaCameraManager.getInstance().closeCamera();
             mVideoLayout.destroy();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG,"onDestroy()");
+        super.onDestroy();
+        InstaCameraManager.getInstance().closeCamera();
+        connectivityManager.unregisterNetworkCallback(networkCallback);
     }
 
     @Override
@@ -159,6 +167,7 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         });
         mVideoLayout.prepare(createParams());
         mVideoLayout.play();
+        mVideoLayout.switchNormalMode();
     }
 
     @Override
@@ -179,7 +188,15 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         super.onCameraStatusChanged(enabled);
         if (enabled) {
             Log.d(TAG,"Camera Enabled");
-            InstaCameraManager.getInstance().startPreviewStream(InstaCameraManager.getInstance().getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL).get(0));
+            final Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    //Do something after 100ms
+                    Log.d(TAG,"starting preview stream");
+                    InstaCameraManager.getInstance().startPreviewStream(InstaCameraManager.getInstance().getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL).get(0));
+                }
+            }, 3000);
         } else {
             Log.d(TAG,"Camera NOT Enabled");
         }
