@@ -25,18 +25,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
 import android.net.Uri;
-import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 
-import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Looper;
 import android.util.Log;
@@ -46,12 +40,9 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.net.wifi.WifiManager;
 import android.widget.ProgressBar;
 
-import com.arashivision.sdkcamera.camera.InstaCameraManager;
-
-public class DeviceControlActivity extends BaseObserveCameraActivity implements View.OnTouchListener {
+public class DeviceControlActivity extends AppCompatActivity implements View.OnTouchListener {
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
@@ -71,11 +62,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     private int highlightColor;
 
     private GestureDetectorListener gestureDetector;
-
-    private String SSID;
-    private String password;
-    private WifiManager wifiManager;
-    ConnectivityManager connectivityManager;
 
     // Code to manage Service lifecycle.
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -196,8 +182,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         highlightColor = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getInt("prefHighlightColor", getResources().getColor(R.color.colorAccent));
         shutterButton.setBackgroundColor(highlightColor);
 
-        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
 
@@ -233,7 +217,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         }
         unbindService(mServiceConnection);
         mBluetoothLeService = null;
-        InstaCameraManager.getInstance().closeCamera();
     }
 
     @Override
@@ -437,84 +420,15 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         updateUIElements();
     }
 
-    public void disconnectFromWifi(){
-        //Unregistering network callback instance supplied to requestNetwork call disconnects phone from the connected network
-        connectivityManager.unregisterNetworkCallback(networkCallback);
-    }
-
-    /**
-     * Connect to the specified wifi network.
-     *
-     * @param ssid     - The wifi network SSID
-     * @param password - the wifi password
-     */
-    private void connectToWifi(String ssid, String password) {
-        Log.d(TAG,"connectToWifi()");
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
-            try {
-                WifiConfiguration wifiConfig = new WifiConfiguration();
-                wifiConfig.SSID = "\"" + ssid + "\"";
-                wifiConfig.preSharedKey = "\"" + password + "\"";
-                int netId = wifiManager.addNetwork(wifiConfig);
-                wifiManager.disconnect();
-                wifiManager.enableNetwork(netId, true);
-                wifiManager.reconnect();
-
-            } catch ( Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            WifiNetworkSpecifier wifiNetworkSpecifier = new WifiNetworkSpecifier.Builder()
-                    .setSsid(ssid)
-                    .setWpa2Passphrase(password)
-                    .build();
-
-            NetworkRequest networkRequest = new NetworkRequest.Builder()
-                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                    .setNetworkSpecifier(wifiNetworkSpecifier)
-                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    .build();
-
-            connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            connectivityManager.requestNetwork(networkRequest, networkCallback);
-        }
-    }
-
-    private ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
-        @Override
-        public void onAvailable(Network network) {
-            super.onAvailable(network);
-            Log.e(TAG,"onAvailable");
-            connectivityManager.bindProcessToNetwork(network);
-            startActivity(new Intent(DeviceControlActivity.this, PreviewActivity.class));
-        }
-
-        @Override
-        public void onLosing(@NonNull Network network, int maxMsToLive) {
-            super.onLosing(network, maxMsToLive);
-            Log.e(TAG,"onLosing");
-        }
-
-        @Override
-        public void onLost(Network network) {
-            super.onLost(network);
-            Log.e(TAG, "losing active connection");
-            connectivityManager.bindProcessToNetwork(null);
-            connectivityManager.unregisterNetworkCallback(networkCallback);
-        }
-
-        @Override
-        public void onUnavailable() {
-            super.onUnavailable();
-            Log.e(TAG,"onUnavailable");
-        }
-    };
-
     private void startPreview() {
         // Stuff that updates the UI
-        progressBar.setVisibility(View.INVISIBLE);
-        modeImageView.setVisibility(View.VISIBLE);
-        shutterButton.setVisibility(View.VISIBLE);
-        connectToWifi(mDeviceName + ".OSC","88888888");
+        if(!cameraStatus.busy) {
+            progressBar.setVisibility(View.INVISIBLE);
+            modeImageView.setVisibility(View.VISIBLE);
+            shutterButton.setVisibility(View.VISIBLE);
+            final Intent intent = new Intent(DeviceControlActivity.this, PreviewActivity.class);
+            intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_NAME, mDeviceName);
+            startActivity(intent);
+        }
     }
 }
