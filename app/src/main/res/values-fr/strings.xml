@@ -16,4 +16,8 @@
     <string name="appsettings_label">Réglages</string>
     <string name="btn_sendlogs_title">Envoyer les journaux</string>
     <string name="ble_not_supported">Bluetooth à basse consommation non disponible</string>
+    <string name="pref_debuglogging_name">Activer les journaux debug</string>
+    <string name="close_label">Fermer</string>
+    <string name="pref_debuglogging_summary">Activer uniquement lorsque demandé par le support. Peut nuire aux performance. Désactiver après usage.</string>
+    <string name="debug_settings_title">Réglages Debug</string>
 </resources>
