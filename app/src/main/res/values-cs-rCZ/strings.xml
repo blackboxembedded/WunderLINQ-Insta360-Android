@@ -16,4 +16,8 @@
     <string name="appsettings_label">Nastavení aplikace</string>
     <string name="sendlogs_body">Prosím popište problém (anglicky):
 \n</string>
+    <string name="pref_debuglogging_name">Povolit rozšířené logování</string>
+    <string name="close_label">Zavřít</string>
+    <string name="debug_settings_title">Nastavení ladění</string>
+    <string name="pref_debuglogging_summary">Povolte pouze pro potřeby technické podpory, může mít vliv na výkon aplikace.</string>
 </resources>
