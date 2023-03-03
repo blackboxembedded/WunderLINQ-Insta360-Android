@@ -17,4 +17,8 @@
     <string name="appsettings_label">Nastavitve aplikacije</string>
     <string name="btn_sendlogs_title">Pošlji dnevnik</string>
     <string name="ble_not_supported">Bluetooth z nizko porabo energije - BLE ni podprt</string>
+    <string name="debug_settings_title">Nastavitve razhroščevanja</string>
+    <string name="pref_debuglogging_name">Omogoči beleženje razhroščevanja</string>
+    <string name="close_label">Zapri</string>
+    <string name="pref_debuglogging_summary">Omogoči le če to potrebuje podporni servis saj lahko vpliva na delovanje aplikacije. Onemogočite ko je končano.</string>
 </resources>
