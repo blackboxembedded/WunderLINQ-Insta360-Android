@@ -33,6 +33,7 @@ import android.os.IBinder;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -345,7 +346,11 @@ public class DeviceControlActivity extends AppCompatActivity implements View.OnT
 
     private void leftKey(){ finish(); }
 
-    private void rightKey(){ startPreview(); }
+    private void rightKey(){
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("prefEnablePreview", false)) {
+            startPreview();
+        }
+    }
 
     private void toggleShutter(){
         switch (cameraStatus.mode) {
