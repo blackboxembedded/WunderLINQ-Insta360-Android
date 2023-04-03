@@ -1,11 +1,16 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
-
     <PreferenceCategory app:title="@string/ui_title" >
         <com.rarepebble.colorpicker.ColorPreference
             app:key="prefHighlightColor"
             app:title="@string/pref_highlightColor_title"
             app:defaultValue="#0059ff"
             />
+        <CheckBoxPreference
+            app:defaultValue="false"
+            app:key="prefEnablePreview"
+            app:summary="@string/pref_preview_summary"
+            app:title="@string/pref_preview_name" >
+        </CheckBoxPreference>
     </PreferenceCategory>
     <PreferenceCategory
         app:title="@string/debug_settings_title"

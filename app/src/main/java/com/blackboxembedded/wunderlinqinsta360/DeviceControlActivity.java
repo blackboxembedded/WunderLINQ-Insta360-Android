@@ -39,6 +39,7 @@ import android.os.IBinder;
 import androidx.annotation.NonNull;
 
 import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -412,7 +413,11 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
 
     private void leftKey(){ finish(); }
 
-    private void rightKey(){ startPreview(); }
+    private void rightKey(){
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("prefEnablePreview", false)) {
+            startPreview();
+        }
+    }
 
     private void toggleShutter(){
         switch (cameraStatus.mode) {
