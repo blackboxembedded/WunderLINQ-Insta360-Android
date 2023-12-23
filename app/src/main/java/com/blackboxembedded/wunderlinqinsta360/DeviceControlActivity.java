@@ -206,12 +206,12 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
 
             @Override
             public void onSwipeUp() {
-                upKey();
+                nextMode();
             }
 
             @Override
             public void onSwipeDown() {
-                downKey();
+                previousMode();
             }
 
             @Override
@@ -310,6 +310,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                 rightKey();
                 return true;
             case KeyEvent.KEYCODE_ESCAPE:
+                SoundManager.playSound(this, R.raw.enter);
                 String wunderLINQApp = "wunderlinq://datagrid";
                 Intent intent = new
                         Intent(android.content.Intent.ACTION_VIEW);
@@ -403,23 +404,20 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         shutterButton.setVisibility(View.VISIBLE);
     }
 
-    private void upKey(){
-        nextMode();
+    private void leftKey(){
+        SoundManager.playSound(this, R.raw.enter);
+        finish();
     }
-
-    private void downKey(){
-        previousMode();
-    }
-
-    private void leftKey(){ finish(); }
 
     private void rightKey(){
+        SoundManager.playSound(this, R.raw.enter);
         if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("prefEnablePreview", false)) {
             startPreview();
         }
     }
 
     private void toggleShutter(){
+        SoundManager.playSound(this, R.raw.enter);
         switch (cameraStatus.mode) {
             case 0:
                 if (cameraStatus.busy) {
@@ -481,6 +479,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     }
 
     private void nextMode() {
+        SoundManager.playSound(this, R.raw.directional);
         //Next Camera Mode
         if(!cameraStatus.busy) {
             if (cameraStatus.mode == 3) {
@@ -493,6 +492,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     }
 
     private void previousMode() {
+        SoundManager.playSound(this, R.raw.directional);
         //Previous Camera Mode
         if(!cameraStatus.busy) {
             if (cameraStatus.mode == 0) {

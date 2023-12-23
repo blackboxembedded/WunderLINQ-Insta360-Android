@@ -142,6 +142,7 @@ public class DeviceScanActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
+                SoundManager.playSound(DeviceScanActivity.this, R.raw.enter);
                 if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
                         (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)) {
                     final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
@@ -265,6 +266,7 @@ public class DeviceScanActivity extends AppCompatActivity {
             case KeyEvent.KEYCODE_DPAD_UP:
             case KeyEvent.KEYCODE_PLUS:
             case KeyEvent.KEYCODE_NUMPAD_ADD:
+                SoundManager.playSound(this, R.raw.directional);
                 if (listView.getSelectedItemPosition() == 0 && lastPosition == 0){
                     listView.setSelection(listView.getCount() - 1);
                 }
@@ -274,6 +276,7 @@ public class DeviceScanActivity extends AppCompatActivity {
             case KeyEvent.KEYCODE_DPAD_DOWN:
             case KeyEvent.KEYCODE_MINUS:
             case KeyEvent.KEYCODE_NUMPAD_SUBTRACT:
+                SoundManager.playSound(this, R.raw.directional);
                 if ((listView.getSelectedItemPosition() == (listView.getCount() - 1)) && lastPosition == (listView.getCount() - 1) ){
                     listView.setSelection(0);
                 }
@@ -281,6 +284,7 @@ public class DeviceScanActivity extends AppCompatActivity {
                 mLeDeviceListAdapter.notifyDataSetChanged();
                 return true;
             case KeyEvent.KEYCODE_ESCAPE:
+                SoundManager.playSound(this, R.raw.enter);
                 String callingApp = "wunderlinq://datagrid";
                 Intent intent = new
                         Intent(android.content.Intent.ACTION_VIEW);
