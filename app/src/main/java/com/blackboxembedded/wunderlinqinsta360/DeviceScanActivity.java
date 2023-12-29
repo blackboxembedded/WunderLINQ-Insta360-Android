@@ -65,7 +65,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class DeviceScanActivity extends AppCompatActivity {
-    public final static String TAG = "DeviceActivity";
+    public final static String TAG = "DeviceScanActivity";
     private LeDeviceListAdapter mLeDeviceListAdapter;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;

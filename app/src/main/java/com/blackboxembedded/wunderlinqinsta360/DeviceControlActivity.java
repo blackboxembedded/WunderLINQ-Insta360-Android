@@ -37,6 +37,7 @@ import android.os.Handler;
 import android.os.IBinder;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 import android.os.Looper;
 import android.preference.PreferenceManager;
@@ -186,7 +187,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
 
         if(mDeviceAddress == null){
-            Log.d(TAG, "NULL Address, going back to main activity");
             final Intent mainIntent = new Intent(this, DeviceScanActivity.class);
             startActivity(mainIntent);
         }
@@ -241,6 +241,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         cameraStatus = new CameraStatus();
         cameraStatus.busy = false;
         cameraStatus.mode = 0;
+
         // Capture Status Callback
         InstaCameraManager.getInstance().setCaptureStatusListener(this);
     }
@@ -249,7 +250,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     protected void onResume() {
         Log.d(TAG,"onResume()");
         super.onResume();
-        registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        ContextCompat.registerReceiver(this, mGattUpdateReceiver, makeGattUpdateIntentFilter(), ContextCompat.RECEIVER_EXPORTED);
     }
 
     @Override
