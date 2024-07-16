@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -54,8 +55,6 @@ import android.widget.Toast;
 
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
 import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener;
-import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener;
-import com.arashivision.sdkmedia.player.listener.PlayerViewListener;
 
 import java.util.Arrays;
 
@@ -65,6 +64,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
     public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
 
+    private SharedPreferences sharedPrefs;
     private String mDeviceName;
     private String mDeviceAddress;
     private BluetoothLeService mBluetoothLeService;
@@ -143,31 +143,25 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
                         if (bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE).contains(GattAttributes.INSTA360_COMMANDRESPONSE_CHARACTERISTIC)) {
                             byte[] data = bd.getByteArray(BluetoothLeService.EXTRA_BYTE_VALUE);
                             String characteristicValue = Utils.ByteArraytoHex(data);
-                            Log.d(TAG, "UUID: " + bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) + " DATA: " + characteristicValue);
+                            if (sharedPrefs.getBoolean("prefDebugLogging", false)) {
+                                Log.d(TAG, "UUID: " + bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) + " DATA: " + characteristicValue);
+                            }
 
                             if(response == null){
-                                if(data[0] > (byte)0x20){
-                                    response = new byte[(byte)data[0]];
-                                    System.arraycopy(data, 0, response, 0, data.length);
-                                    responsePosition = responsePosition + data.length;
-                                }
+                                responsePosition = 0;
+                                response = new byte[(byte)data[0]];
+                                System.arraycopy(data, 0, response, 0, data.length);
+                                responsePosition = responsePosition + data.length;
                             } else {
-                                if (responsePosition != response.length){
+                                if (responsePosition != response[0]){
                                     System.arraycopy(data, 0, response, responsePosition, data.length);
                                     responsePosition = responsePosition + data.length;
-                                    if (responsePosition == response.length) {
-                                        Log.d(TAG, Utils.ByteArraytoHex(response));
-
-                                        mBluetoothLeService.command2();
-                                        mBluetoothLeService.command3();
-                                    }
-                                } else {
-                                    if (data[0] == (byte) 0x12) {
-                                        connectToWifi(mDeviceName + ".OSC","88888888");
-                                    } else if (data[0] == (byte) 0x07) {
-                                        //Do Nothing
-                                    }
                                 }
+                            }
+                            if (responsePosition  == response[0]){
+                                processResponse(response);
+                                response = null;
+                                responsePosition = 0;
                             }
                         }
                     }
@@ -175,6 +169,43 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             }
         }
     };
+
+    void processResponse(byte[] message) {
+        if (sharedPrefs.getBoolean("prefDebugLogging", false)) {
+            Log.d(TAG, "processResponse: " + Utils.ByteArraytoHex(message));
+        }
+        switch (message[4]){
+            case 0x04:
+                if (message[7] == (byte)0xC8) {
+                    int startPosition = 25;
+                    // Find the end position
+                    int endPosition = startPosition;
+                    while (endPosition < message.length && message[endPosition] != 0x12) {
+                        endPosition++;
+                    }
+                    // Copy the array from startPosition to endPosition
+                    byte[] SSID = new byte[endPosition - startPosition];
+                    System.arraycopy(message, startPosition, SSID, 0, SSID.length);
+                    if (sharedPrefs.getBoolean("prefDebugLogging", false)) {
+                        Log.d(TAG, "Camera SSID: " + new String(SSID));
+                    }
+                    //Get Password
+                    // Copy the array from startPosition to endPosition
+                    byte[] WIFI_PASSWORD = new byte[message[endPosition + 1]];
+                    System.arraycopy(message, endPosition + 2, WIFI_PASSWORD, 0, WIFI_PASSWORD.length);
+                    if (sharedPrefs.getBoolean("prefDebugLogging", false)) {
+                        Log.d(TAG, "Camera PASS: " + new String(WIFI_PASSWORD));
+                    }
+                    connectToWifi(new String(SSID), new String(WIFI_PASSWORD));
+                }
+                break;
+            case 0x05:
+                //Keep Alive
+                break;
+            default:
+                break;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -190,6 +221,8 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             final Intent mainIntent = new Intent(this, DeviceScanActivity.class);
             startActivity(mainIntent);
         }
+
+        sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         // Keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -235,6 +268,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
 
         if (mBluetoothLeService != null) {
+            Log.d(TAG,"Attempting connection to: " + mDeviceName + "-" + mDeviceAddress);
             mBluetoothLeService.connect(mDeviceAddress, mDeviceName);
         }
 
@@ -517,7 +551,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
      * @param password - the wifi password
      */
     private void connectToWifi(String ssid, String password) {
-        Log.d(TAG,"connectToWifi()");
+        Log.d(TAG,"connectToWifi(" + ssid + ")");
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
             try {
                 WifiConfiguration wifiConfig = new WifiConfiguration();
@@ -540,7 +574,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             NetworkRequest networkRequest = new NetworkRequest.Builder()
                     .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                     .setNetworkSpecifier(wifiNetworkSpecifier)
-                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                     .build();
 
             connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);

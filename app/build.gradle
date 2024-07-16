@@ -4,10 +4,10 @@ android {
     compileSdk 33
     defaultConfig {
         applicationId "com.blackboxembedded.wunderlinqinsta360"
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 33
-        versionCode 8
-        versionName "1.7"
+        versionCode 9
+        versionName "1.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -18,6 +18,9 @@ android {
         }
     }
     namespace 'com.blackboxembedded.wunderlinqinsta360'
+    buildFeatures {
+        buildConfig true
+    }
 }
 
 dependencies {
@@ -31,7 +34,7 @@ dependencies {
     implementation "androidx.cardview:cardview:1.0.0"
     implementation "androidx.lifecycle:lifecycle-viewmodel:2.5.1"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1"
-    implementation 'com.arashivision.sdk:sdkcamera:1.5.9'
+    implementation 'com.arashivision.sdk:sdkcamera:1.6.0'
     implementation 'com.arashivision.sdk:sdkmedia:1.5.7'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
