@@ -19,13 +19,7 @@ package com.blackboxembedded.wunderlinqinsta360;
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.le.BluetoothLeScanner;
-import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanFilter;
-import android.bluetooth.le.ScanResult;
-import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -35,13 +29,11 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Handler;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.location.LocationManagerCompat;
 
-import android.os.ParcelUuid;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.Log;
@@ -58,21 +50,19 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.arashivision.sdkcamera.camera.InstaCameraManager;
+import com.arashivision.sdkcamera.camera.callback.IScanBleListener;
+import com.clj.fastble.data.BleDevice;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-public class DeviceScanActivity extends AppCompatActivity {
+public class DeviceScanActivity extends AppCompatActivity implements IScanBleListener {
     public final static String TAG = "DeviceScanActivity";
     private LeDeviceListAdapter mLeDeviceListAdapter;
     private BluetoothAdapter mBluetoothAdapter;
-    private BluetoothLeScanner bluetoothLeScanner;
-    private boolean mScanning;
-    private Handler mHandler;
-
-    private static final long SCAN_PERIOD = 20000;
 
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int PERMISSION_REQUEST_BLUETOOTH_CONNECT = 100;
@@ -145,15 +135,12 @@ public class DeviceScanActivity extends AppCompatActivity {
                 SoundManager.playSound(DeviceScanActivity.this, R.raw.enter);
                 if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
                         (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)) {
-                    final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
+                    final BleDevice device = mLeDeviceListAdapter.getDevice(position);
                     if (device == null) return;
+                    InstaCameraManager.getInstance().stopBleScan();
+                    InstaCameraManager.getInstance().connectBle(device);
                     final Intent intent = new Intent(DeviceScanActivity.this, DeviceControlActivity.class);
-                    intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_NAME, device.getName());
-                    intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
-                    if (mScanning) {
-                        bluetoothLeScanner.stopScan(mLeScanCallback);
-                        mScanning = false;
-                    }
+                    intent.putExtra(DeviceControlActivity.EXTRAS_DEVICE_NAME, device);
                     startActivity(intent);
                 }
             }
@@ -162,7 +149,6 @@ public class DeviceScanActivity extends AppCompatActivity {
         highlightColor = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getInt("prefHighlightColor", getResources().getColor(R.color.colorAccent));
 
         getSupportActionBar().setTitle(R.string.cameralist_title);
-        mHandler = new Handler();
 
         // Use this check to determine whether BLE is supported on the device.  Then you can
         // selectively disable BLE-related features.
@@ -181,7 +167,6 @@ public class DeviceScanActivity extends AppCompatActivity {
         if (mBluetoothAdapter == null) {
             Toast.makeText(this, R.string.error_bluetooth_not_supported, Toast.LENGTH_SHORT).show();
             finish();
-            return;
         }
     }
 
@@ -205,7 +190,8 @@ public class DeviceScanActivity extends AppCompatActivity {
             // Initializes list view adapter.
             mLeDeviceListAdapter = new LeDeviceListAdapter();
             listView.setAdapter(mLeDeviceListAdapter);
-            scanLeDevice(true);
+            InstaCameraManager.getInstance().setScanBleListener(this);
+            InstaCameraManager.getInstance().startBleScan(30_000);
         }
     }
 
@@ -224,10 +210,7 @@ public class DeviceScanActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        if (mLeDeviceListAdapter != null) {
-            scanLeDevice(false);
-            mLeDeviceListAdapter.clear();
-        }
+
         if (cTimer != null){
             cancelTimer();
         }
@@ -296,63 +279,48 @@ public class DeviceScanActivity extends AppCompatActivity {
         }
     }
 
-    private void scanLeDevice(final boolean enable) {
-        Log.d(TAG,"scanLeDevice()");
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
-                (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)) {
-            bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-
-            if (bluetoothLeScanner != null) {
-                ScanSettings bleScanSettings = new ScanSettings.Builder()
-                        .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
-                        .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
-                        .build();
-                // devices UUID service mask
-                ParcelUuid parcelUuidMask = new ParcelUuid(UUID.fromString("0000FFFF-0000-0000-0000-000000000000"));
-
-                List<ScanFilter> bleScanFilter = new ArrayList<>();
-                ScanFilter.Builder builder = new ScanFilter.Builder().setServiceUuid(new ParcelUuid(UUIDDatabase.UUID_INSTA360_CONTROL_SERVICE), parcelUuidMask);
-                bleScanFilter.add(builder.build());
-                if (enable) {
-                    // Stops scanning after a pre-defined scan period.
-                    mHandler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
-                                    (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)) {
-                                mScanning = false;
-                                bluetoothLeScanner.stopScan(mLeScanCallback);
-                                startTimer();
-                            }
-                        }
-                    }, SCAN_PERIOD);
-
-                    mScanning = true;
-                    bluetoothLeScanner.startScan(bleScanFilter, bleScanSettings, mLeScanCallback);
-                    if (cTimer != null) {
-                        cancelTimer();
-                    }
-                } else {
-                    mScanning = false;
-                    bluetoothLeScanner.stopScan(mLeScanCallback);
-                    startTimer();
-                }
-            }
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (isFinishing()) {
+            InstaCameraManager.getInstance().setScanBleListener(null);
+            InstaCameraManager.getInstance().stopBleScan();
         }
+    }
+
+    @Override
+    public void onScanStartSuccess() {
+
+    }
+
+    @Override
+    public void onScanStartFail() {
+
+    }
+
+    @Override
+    public void onScanning(BleDevice bleDevice) {
+        mLeDeviceListAdapter.addDevice(bleDevice);
+        mLeDeviceListAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onScanFinish(List<BleDevice> bleDeviceList) {
+        mLeDeviceListAdapter.updateData(bleDeviceList);
     }
 
     // Adapter for holding devices found through scanning.
     private class LeDeviceListAdapter extends BaseAdapter {
-        private ArrayList<Device> mLeDevices;
+        private ArrayList<BleDevice> mLeDevices;
         private LayoutInflater mInflator;
 
         public LeDeviceListAdapter() {
             super();
-            mLeDevices = new ArrayList<Device>();
+            mLeDevices = new ArrayList<BleDevice>();
             mInflator = DeviceScanActivity.this.getLayoutInflater();
         }
 
-        public void addDevice(Device device) {
+        public void addDevice(BleDevice device) {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
                     (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)) {
                 if (!mLeDevices.contains(device)) {
@@ -362,9 +330,15 @@ public class DeviceScanActivity extends AppCompatActivity {
             }
         }
 
-        public BluetoothDevice getDevice(int position) {
+        private void updateData(List<BleDevice> list) {
+            mLeDevices.clear();
+            mLeDevices.addAll(list);
+            notifyDataSetChanged();
+        }
 
-            return mLeDevices.get(position).getDevice();
+        public BleDevice getDevice(int position) {
+
+            return mLeDevices.get(position);
         }
 
         public void clear() {
@@ -401,7 +375,7 @@ public class DeviceScanActivity extends AppCompatActivity {
 
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
                     (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)) {
-                BluetoothDevice device = mLeDevices.get(i).getDevice();
+                BleDevice device = mLeDevices.get(i);
                 final String deviceName = device.getName();
                 if (deviceName != null && deviceName.length() > 0)
                     viewHolder.deviceName.setText(deviceName);
@@ -416,31 +390,6 @@ public class DeviceScanActivity extends AppCompatActivity {
             return view;
         }
     }
-
-    // Device scan callback.
-    private ScanCallback mLeScanCallback = new ScanCallback() {
-        @Override
-        public void onScanResult(int callbackType, ScanResult result) {
-            super.onScanResult(callbackType, result);
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mLeDeviceListAdapter.addDevice(new Device(result.getDevice()));
-                    mLeDeviceListAdapter.notifyDataSetChanged();
-                }
-            });
-        }
-
-        @Override
-        public void onBatchScanResults(List<ScanResult> results) {
-            super.onBatchScanResults(results);
-        }
-
-        @Override
-        public void onScanFailed(int errorCode) {
-            super.onScanFailed(errorCode);
-        }
-    };
 
     static class ViewHolder {
         TextView deviceName;
@@ -595,7 +544,7 @@ public class DeviceScanActivity extends AppCompatActivity {
                 }
 
                 public void onFinish() {
-                    scanLeDevice(true);
+                    InstaCameraManager.getInstance().startBleScan(30_000);
                     timerRunning = false;
                 }
             };

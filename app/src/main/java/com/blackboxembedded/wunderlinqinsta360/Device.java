@@ -17,21 +17,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 package com.blackboxembedded.wunderlinqinsta360;
 
-import android.bluetooth.BluetoothDevice;
+import com.clj.fastble.data.BleDevice;
 
 public class Device {
-    BluetoothDevice device;
+    BleDevice device;
 
     // Empty constructor
     public Device(){
 
     }
     // Constructor
-    public Device(BluetoothDevice device) {
+    public Device(BleDevice device) {
         this.device = device;
     }
 
-    public BluetoothDevice getDevice(){
+    public BleDevice getDevice(){
         return this.device;
     }
 
@@ -41,7 +41,7 @@ public class Device {
 
         if (v instanceof Device){
             Device ptr = (Device) v;
-            retVal = ptr.getDevice().getAddress().equals(this.getDevice().getAddress());
+            retVal = ptr.getDevice().equals(this.getDevice());
         }
 
         return retVal;
