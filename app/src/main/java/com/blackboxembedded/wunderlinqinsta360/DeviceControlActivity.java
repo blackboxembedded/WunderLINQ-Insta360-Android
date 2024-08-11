@@ -18,27 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package com.blackboxembedded.wunderlinqinsta360;
 
 import android.content.ActivityNotFoundException;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
 import android.net.Uri;
-import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
-
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 
 import android.os.Looper;
 import android.preference.PreferenceManager;
@@ -49,7 +33,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.net.wifi.WifiManager;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -62,12 +45,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
-    public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";
-
-    private SharedPreferences sharedPrefs;
-    private String mDeviceName;
-    private String mDeviceAddress;
-    private BluetoothLeService mBluetoothLeService;
 
     private CameraStatus cameraStatus;
 
@@ -78,134 +55,9 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
 
     private int highlightColor;
 
+    private String mDeviceName = "Insta360";
+
     private GestureDetectorListener gestureDetector;
-
-    private String SSID;
-    private String password;
-    private WifiManager wifiManager;
-    ConnectivityManager connectivityManager;
-
-    private byte[] response;
-    private int responsePosition = 0;
-
-    // Code to manage Service lifecycle.
-    private final ServiceConnection mServiceConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder service) {
-            Log.d(TAG, "onServiceConnected()");
-            mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
-            if (!mBluetoothLeService.initialize()) {
-                Log.e(TAG, "Unable to initialize Bluetooth");
-                finish();
-            }
-            // Automatically connects to the device upon successful start-up initialization.
-            mBluetoothLeService.connect(mDeviceAddress, mDeviceName);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            mBluetoothLeService = null;
-        }
-    };
-
-    private static IntentFilter makeGattUpdateIntentFilter() {
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_NOTFICATION_ENABLED);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        intentFilter.addAction(BluetoothLeService.ACTION_SERVICE_DISCONNECTED);
-        return intentFilter;
-    }
-
-    // Handles various events fired by the Service.
-    // ACTION_GATT_CONNECTED: connected to a GATT server.
-    // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-    // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
-    // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read
-    //                        or notification operations.
-    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-            } else if (BluetoothLeService.ACTION_SERVICE_DISCONNECTED.equals(action)){
-                finish();
-            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-                finish();
-            } else if (BluetoothLeService.ACTION_NOTFICATION_ENABLED.equals(action)) {
-                mBluetoothLeService.requestCameraWifi();
-            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                Bundle bd = intent.getExtras();
-                if(bd != null){
-                    if(bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) != null) {
-                        if (bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE).contains(GattAttributes.INSTA360_COMMANDRESPONSE_CHARACTERISTIC)) {
-                            byte[] data = bd.getByteArray(BluetoothLeService.EXTRA_BYTE_VALUE);
-                            String characteristicValue = Utils.ByteArraytoHex(data);
-                            if (sharedPrefs.getBoolean("prefDebugLogging", false)) {
-                                Log.d(TAG, "UUID: " + bd.getString(BluetoothLeService.EXTRA_BYTE_UUID_VALUE) + " DATA: " + characteristicValue);
-                            }
-
-                            if(response == null){
-                                responsePosition = 0;
-                                response = new byte[(byte)data[0]];
-                                System.arraycopy(data, 0, response, 0, data.length);
-                                responsePosition = responsePosition + data.length;
-                            } else {
-                                if (responsePosition != response[0]){
-                                    System.arraycopy(data, 0, response, responsePosition, data.length);
-                                    responsePosition = responsePosition + data.length;
-                                }
-                            }
-                            if (responsePosition  == response[0]){
-                                processResponse(response);
-                                response = null;
-                                responsePosition = 0;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    void processResponse(byte[] message) {
-        if (sharedPrefs.getBoolean("prefDebugLogging", false)) {
-            Log.d(TAG, "processResponse: " + Utils.ByteArraytoHex(message));
-        }
-        switch (message[4]){
-            case 0x04:
-                if (message[7] == (byte)0xC8) {
-                    int startPosition = 25;
-                    // Find the end position
-                    int endPosition = startPosition;
-                    while (endPosition < message.length && message[endPosition] != 0x12) {
-                        endPosition++;
-                    }
-                    // Copy the array from startPosition to endPosition
-                    byte[] SSID = new byte[endPosition - startPosition];
-                    System.arraycopy(message, startPosition, SSID, 0, SSID.length);
-                    if (sharedPrefs.getBoolean("prefDebugLogging", false)) {
-                        Log.d(TAG, "Camera SSID: " + new String(SSID));
-                    }
-                    //Get Password
-                    // Copy the array from startPosition to endPosition
-                    byte[] WIFI_PASSWORD = new byte[message[endPosition + 1]];
-                    System.arraycopy(message, endPosition + 2, WIFI_PASSWORD, 0, WIFI_PASSWORD.length);
-                    if (sharedPrefs.getBoolean("prefDebugLogging", false)) {
-                        Log.d(TAG, "Camera PASS: " + new String(WIFI_PASSWORD));
-                    }
-                    connectToWifi(new String(SSID), new String(WIFI_PASSWORD));
-                }
-                break;
-            case 0x05:
-                //Keep Alive
-                break;
-            default:
-                break;
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -214,15 +66,7 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         setContentView(R.layout.device_control_activity);
 
         final Intent intent = getIntent();
-        mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
-
-        if(mDeviceAddress == null){
-            final Intent mainIntent = new Intent(this, DeviceScanActivity.class);
-            startActivity(mainIntent);
-        }
-
-        sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         // Keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -262,16 +106,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         highlightColor = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this).getInt("prefHighlightColor", getResources().getColor(R.color.colorAccent));
         shutterButton.setBackgroundColor(highlightColor);
 
-        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-
-        Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
-        bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
-
-        if (mBluetoothLeService != null) {
-            Log.d(TAG,"Attempting connection to: " + mDeviceName + "-" + mDeviceAddress);
-            mBluetoothLeService.connect(mDeviceAddress, mDeviceName);
-        }
-
         cameraStatus = new CameraStatus();
         cameraStatus.busy = false;
         cameraStatus.mode = 0;
@@ -284,25 +118,18 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     protected void onResume() {
         Log.d(TAG,"onResume()");
         super.onResume();
-        ContextCompat.registerReceiver(this, mGattUpdateReceiver, makeGattUpdateIntentFilter(), ContextCompat.RECEIVER_EXPORTED);
     }
 
     @Override
     protected void onPause() {
         Log.d(TAG,"onPause()");
         super.onPause();
-        unregisterReceiver(mGattUpdateReceiver);
     }
 
     @Override
     protected void onDestroy() {
         Log.d(TAG,"onDestroy()");
         super.onDestroy();
-        if (mBluetoothLeService != null) {
-            mBluetoothLeService.disconnect();
-        }
-        unbindService(mServiceConnection);
-        mBluetoothLeService = null;
         InstaCameraManager.getInstance().closeCamera();
     }
 
@@ -445,9 +272,9 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     }
 
     private void rightKey(){
-        SoundManager.playSound(this, R.raw.enter);
         if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("prefEnablePreview", false)) {
-            startPreview();
+            SoundManager.playSound(this, R.raw.enter);
+            startActivity(new Intent(DeviceControlActivity.this, PreviewActivity.class));
         }
     }
 
@@ -539,90 +366,8 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
         updateUIElements();
     }
 
-    public void disconnectFromWifi(){
-        //Unregistering network callback instance supplied to requestNetwork call disconnects phone from the connected network
-        connectivityManager.unregisterNetworkCallback(networkCallback);
-    }
-
-    /**
-     * Connect to the specified wifi network.
-     *
-     * @param ssid     - The wifi network SSID
-     * @param password - the wifi password
-     */
-    private void connectToWifi(String ssid, String password) {
-        Log.d(TAG,"connectToWifi(" + ssid + ")");
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
-            try {
-                WifiConfiguration wifiConfig = new WifiConfiguration();
-                wifiConfig.SSID = "\"" + ssid + "\"";
-                wifiConfig.preSharedKey = "\"" + password + "\"";
-                int netId = wifiManager.addNetwork(wifiConfig);
-                wifiManager.disconnect();
-                wifiManager.enableNetwork(netId, true);
-                wifiManager.reconnect();
-
-            } catch ( Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            WifiNetworkSpecifier wifiNetworkSpecifier = new WifiNetworkSpecifier.Builder()
-                    .setSsid(ssid)
-                    .setWpa2Passphrase(password)
-                    .build();
-
-            NetworkRequest networkRequest = new NetworkRequest.Builder()
-                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                    .setNetworkSpecifier(wifiNetworkSpecifier)
-                    .build();
-
-            connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            connectivityManager.requestNetwork(networkRequest, networkCallback);
-        }
-    }
     private boolean isCameraConnected() {
         return InstaCameraManager.getInstance().getCameraConnectedType() != InstaCameraManager.CONNECT_TYPE_NONE;
-    }
-
-
-    private ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
-        @Override
-        public void onAvailable(Network network) {
-            super.onAvailable(network);
-            Log.e(TAG,"onAvailable");
-            connectivityManager.bindProcessToNetwork(network);
-
-            InstaCameraManager.getInstance().openCamera(InstaCameraManager.CONNECT_TYPE_WIFI);
-
-        }
-
-        @Override
-        public void onLosing(@NonNull Network network, int maxMsToLive) {
-            super.onLosing(network, maxMsToLive);
-            Log.e(TAG,"onLosing");
-        }
-
-        @Override
-        public void onLost(Network network) {
-            super.onLost(network);
-            Log.e(TAG, "losing active connection");
-            connectivityManager.bindProcessToNetwork(null);
-            connectivityManager.unregisterNetworkCallback(networkCallback);
-        }
-
-        @Override
-        public void onUnavailable() {
-            super.onUnavailable();
-            Log.e(TAG,"onUnavailable");
-        }
-    };
-
-    private void startPreview() {
-        // Stuff that updates the UI
-        progressBar.setVisibility(View.INVISIBLE);
-        modeImageView.setVisibility(View.VISIBLE);
-        shutterButton.setVisibility(View.VISIBLE);
-        startActivity(new Intent(DeviceControlActivity.this, PreviewActivity.class));
     }
 
     private boolean checkSdCardEnabled() {
@@ -643,8 +388,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
             shutterButton.setVisibility(View.VISIBLE);
             updateUIElements();
         } else {
-            //CameraBindNetworkManager.getInstance().unbindNetwork();
-            //NetworkManager.getInstance().clearBindProcess();
             Log.d(TAG,"Camera NOT Enabled");
         }
     }
@@ -653,8 +396,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     public void onCameraConnectError(int errorCode) {
         super.onCameraConnectError(errorCode);
         Log.d(TAG,"onCameraConnectError: " + errorCode);
-        //CameraBindNetworkManager.getInstance().unbindNetwork();
-        //Toast.makeText(this, getResources().getString(R.string.main_toast_camera_connect_error, errorCode), Toast.LENGTH_SHORT).show();
     }
 
     @Override
