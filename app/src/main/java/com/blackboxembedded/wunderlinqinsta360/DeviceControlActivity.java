@@ -18,27 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package com.blackboxembedded.wunderlinqinsta360;
 
 import android.content.ActivityNotFoundException;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
 import android.net.Uri;
-import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiNetworkSpecifier;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
-
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 
 import android.os.Looper;
 import android.preference.PreferenceManager;
@@ -49,11 +33,9 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.net.wifi.WifiManager;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.arashivision.onecamera.camerarequest.WifiInfo;
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
 import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener;
 
@@ -63,8 +45,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
 
     public static final String EXTRAS_DEVICE_NAME = "DEVICE_NAME";
-
-    private SharedPreferences sharedPrefs;
 
     private CameraStatus cameraStatus;
 
@@ -87,8 +67,6 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
 
         final Intent intent = getIntent();
         mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
-
-        sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         // Keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -294,15 +272,9 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     }
 
     private void rightKey(){
-        SoundManager.playSound(this, R.raw.enter);
         if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("prefEnablePreview", false)) {
-            WifiInfo wifiInfo = InstaCameraManager.getInstance().getWifiInfo();
-            if (wifiInfo != null){
-                final Intent intent = new Intent(DeviceControlActivity.this, PreviewActivity.class);
-                intent.putExtra(PreviewActivity.EXTRAS_WIFI_NAME, wifiInfo.getSsid());
-                intent.putExtra(PreviewActivity.EXTRAS_WIFI_PWD, wifiInfo.getPwd());
-                startActivity(intent);
-            }
+            SoundManager.playSound(this, R.raw.enter);
+            startActivity(new Intent(DeviceControlActivity.this, PreviewActivity.class));
         }
     }
 
