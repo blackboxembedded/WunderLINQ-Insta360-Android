@@ -18,6 +18,7 @@ import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 
+import com.arashivision.onecamera.camerarequest.WifiInfo;
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener;
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder;
@@ -27,11 +28,7 @@ import com.arashivision.sdkmedia.player.listener.PlayerViewListener;
 
 public class PreviewActivity extends BaseObserveCameraActivity implements IPreviewStatusListener {
 
-    private final static String TAG = DeviceControlActivity.class.getSimpleName();
-
-    public static final String EXTRAS_WIFI_NAME = "";
-
-    public static final String EXTRAS_WIFI_PWD = "";
+    private final static String TAG = PreviewActivity.class.getSimpleName();
 
     private WifiManager wifiManager;
     ConnectivityManager connectivityManager;
@@ -60,10 +57,6 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.camera_preview_activity);
 
-        final Intent intent = getIntent();
-        String wifiName = intent.getStringExtra(EXTRAS_WIFI_NAME);
-        String wifiPwd = intent.getStringExtra(EXTRAS_WIFI_PWD);
-
         // Keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -73,24 +66,12 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
 
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
 
-        connectToWifi(wifiName, wifiPwd);
-
-        mVideoLayout.setPlayerViewListener(new PlayerViewListener() {
-            @Override
-            public void onLoadingFinish() {
-                InstaCameraManager.getInstance().setPipeline(mVideoLayout.getPipeline());
+        if (wifiManager != null) {
+            WifiInfo wifiInfo = InstaCameraManager.getInstance().getWifiInfo();
+            if (wifiInfo != null) {
+                connectToWifi(wifiInfo.getSsid(), wifiInfo.getPwd());
             }
-
-            @Override
-            public void onReleaseCameraPipeline() {
-                InstaCameraManager.getInstance().setPipeline(null);
-            }
-        });
-        mVideoLayout.prepare(createParams());
-        mVideoLayout.play();
-        mVideoLayout.switchNormalMode();
-
-        InstaCameraManager.getInstance().setPreviewStatusChangedListener(this);
+        }
     }
 
     @Override
@@ -165,6 +146,35 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         Log.d(TAG,"Preview Failed");
     }
 
+    @Override
+    public void onCameraStatusChanged(boolean enabled) {
+        super.onCameraStatusChanged(enabled);
+        Log.d(TAG,"onCameraStatusChanged");
+        if (enabled) {
+            Log.d(TAG, "Camera Enabled");
+            InstaCameraManager.getInstance().startPreviewStream(InstaCameraManager.getInstance().getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL).get(0));
+            mVideoLayout.setPlayerViewListener(new PlayerViewListener() {
+                @Override
+                public void onLoadingFinish() {
+                    Log.d(TAG,"onLoadingFinish()");
+                    InstaCameraManager.getInstance().setPipeline(mVideoLayout.getPipeline());
+                }
+
+                @Override
+                public void onReleaseCameraPipeline() {
+                    Log.d(TAG,"onReleaseCameraPipeline()");
+                    InstaCameraManager.getInstance().setPipeline(null);
+                }
+            });
+            mVideoLayout.prepare(createParams());
+            mVideoLayout.play();
+            mVideoLayout.switchNormalMode();
+
+            InstaCameraManager.getInstance().setPreviewStatusChangedListener(this);
+        } else {
+
+        }
+    }
     private void leftKey(){ finish(); }
 
     /**
@@ -174,7 +184,7 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
      * @param password - the wifi password
      */
     private void connectToWifi(String ssid, String password) {
-        Log.d(TAG,"connectToWifi(" + ssid + ")");
+        Log.d(TAG,"connectToWifi()");
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
             try {
                 WifiConfiguration wifiConfig = new WifiConfiguration();
@@ -213,25 +223,23 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         @Override
         public void onAvailable(Network network) {
             super.onAvailable(network);
-            Log.e(TAG,"onAvailable");
+            Log.d(TAG,"onAvailable");
             connectivityManager.bindProcessToNetwork(network);
 
             InstaCameraManager.getInstance().openCamera(InstaCameraManager.CONNECT_TYPE_WIFI);
-
-            InstaCameraManager.getInstance().startPreviewStream(InstaCameraManager.getInstance().getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL).get(0));
 
         }
 
         @Override
         public void onLosing(@NonNull Network network, int maxMsToLive) {
             super.onLosing(network, maxMsToLive);
-            Log.e(TAG,"onLosing");
+            Log.d(TAG,"onLosing");
         }
 
         @Override
         public void onLost(Network network) {
             super.onLost(network);
-            Log.e(TAG, "losing active connection");
+            Log.d(TAG, "losing active connection");
             connectivityManager.bindProcessToNetwork(null);
             connectivityManager.unregisterNetworkCallback(networkCallback);
         }
@@ -239,7 +247,7 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         @Override
         public void onUnavailable() {
             super.onUnavailable();
-            Log.e(TAG,"onUnavailable");
+            Log.d(TAG,"onUnavailable");
         }
     };
 }
