@@ -4,7 +4,9 @@ buildscript {
     repositories {
         google()
         jcenter()
+        mavenCentral()
 
+        maven { url 'https://maven.aliyun.com/repository/public/' }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.5.2'
@@ -18,9 +20,10 @@ allprojects {
     repositories {
         google()
         jcenter()
+        mavenCentral()
 
         maven { url "https://jitpack.io" }
-
+        maven { url 'https://maven.aliyun.com/repository/public/' }
         maven {
             url 'http://nexus.arashivision.com:9999/repository/maven-public/'
             allowInsecureProtocol = true
