@@ -379,8 +379,8 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     }
 
     @Override
-    public void onCameraStatusChanged(boolean enabled) {
-        super.onCameraStatusChanged(enabled);
+    public void onCameraStatusChanged(boolean enabled, int connectType) {
+        super.onCameraStatusChanged(enabled, connectType);
         if (enabled) {
             Log.d(TAG,"Camera Enabled");
             progressBar.setVisibility(View.INVISIBLE);

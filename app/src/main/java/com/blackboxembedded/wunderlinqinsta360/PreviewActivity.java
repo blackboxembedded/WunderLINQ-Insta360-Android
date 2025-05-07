@@ -147,8 +147,8 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
     }
 
     @Override
-    public void onCameraStatusChanged(boolean enabled) {
-        super.onCameraStatusChanged(enabled);
+    public void onCameraStatusChanged(boolean enabled, int connectType) {
+        super.onCameraStatusChanged(enabled, connectType);
         Log.d(TAG,"onCameraStatusChanged");
         if (enabled) {
             Log.d(TAG, "Camera Enabled");

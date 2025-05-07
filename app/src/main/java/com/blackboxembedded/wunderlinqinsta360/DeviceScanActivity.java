@@ -191,7 +191,7 @@ public class DeviceScanActivity extends AppCompatActivity implements IScanBleLis
             mLeDeviceListAdapter = new LeDeviceListAdapter();
             listView.setAdapter(mLeDeviceListAdapter);
             InstaCameraManager.getInstance().setScanBleListener(this);
-            InstaCameraManager.getInstance().startBleScan(30_000);
+            InstaCameraManager.getInstance().startBleScan();
         }
     }
 
@@ -544,7 +544,7 @@ public class DeviceScanActivity extends AppCompatActivity implements IScanBleLis
                 }
 
                 public void onFinish() {
-                    InstaCameraManager.getInstance().startBleScan(30_000);
+                    InstaCameraManager.getInstance().startBleScan();
                     timerRunning = false;
                 }
             };
