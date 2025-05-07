@@ -18,13 +18,19 @@ import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 
+import com.arashivision.graphicpath.render.source.AssetInfo;
+import com.arashivision.insta360.basecamera.camera.BaseCamera;
+import com.arashivision.insta360.basecamera.camera.CameraType;
+import com.arashivision.insta360.basemedia.asset.WindowCropInfo;
 import com.arashivision.onecamera.camerarequest.WifiInfo;
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener;
+import com.arashivision.sdkcamera.camera.resolution.PreviewStreamResolution;
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder;
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView;
 import com.arashivision.sdkmedia.player.config.InstaStabType;
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener;
+import com.blackboxembedded.wunderlinqinsta360.util.PreviewParamsUtil;
 
 public class PreviewActivity extends BaseObserveCameraActivity implements IPreviewStatusListener {
 
@@ -34,20 +40,16 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
     ConnectivityManager connectivityManager;
 
     private InstaCapturePlayerView mVideoLayout;
+    private PreviewStreamResolution mCurrentResolution;
 
     private CaptureParamsBuilder createParams() {
-        CaptureParamsBuilder builder = new CaptureParamsBuilder()
-                .setCameraType(InstaCameraManager.getInstance().getCameraType())
-                .setMediaOffset(InstaCameraManager.getInstance().getMediaOffset())
-                .setMediaOffsetV2(InstaCameraManager.getInstance().getMediaOffsetV2())
-                .setMediaOffsetV3(InstaCameraManager.getInstance().getMediaOffsetV3())
-                .setCameraSelfie(InstaCameraManager.getInstance().isCameraSelfie())
-                .setGyroTimeStamp(InstaCameraManager.getInstance().getGyroTimeStamp())
-                .setBatteryType(InstaCameraManager.getInstance().getBatteryType())
-                .setStabType(InstaStabType.STAB_TYPE_AUTO)
+        CaptureParamsBuilder builder = PreviewParamsUtil.getCaptureParamsBuilder()
+                .setStabType(InstaStabType.STAB_TYPE_OFF)
                 .setStabEnabled(false);
-        // Normal Mode
-        builder.setRenderModelType(CaptureParamsBuilder.RENDER_MODE_AUTO);
+
+        if (mCurrentResolution != null) {
+            builder.setResolutionParams(mCurrentResolution.width, mCurrentResolution.height, mCurrentResolution.fps);
+        }
 
         return builder;
     }
@@ -62,10 +64,8 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
 
         //Setup Media Player
         mVideoLayout = findViewById(R.id.video_layout);
-        mVideoLayout.setLifecycle(getLifecycle());
 
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-
         if (wifiManager != null) {
             WifiInfo wifiInfo = InstaCameraManager.getInstance().getWifiInfo();
             if (wifiInfo != null) {
@@ -87,30 +87,14 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
     }
 
     @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_DPAD_LEFT:
-                leftKey();
-                return true;
-            case KeyEvent.KEYCODE_ESCAPE:
-                String wunderLINQApp = "wunderlinq://datagrid";
-                Intent intent = new
-                        Intent(android.content.Intent.ACTION_VIEW);
-                intent.setData(Uri.parse(wunderLINQApp));
-                try {
-                    startActivity(intent);
-                } catch ( ActivityNotFoundException ex  ) {
-                }
-                return true;
-            default:
-                return super.onKeyUp(keyCode, event);
-        }
-    }
-
-    @Override
     public void onOpening() {
         // Preview Opening
         Log.d(TAG,"onOpening()");
+        if (mCurrentResolution == null) {
+            InstaCameraManager.getInstance().startPreviewStream();
+        } else {
+            InstaCameraManager.getInstance().startPreviewStream(mCurrentResolution);
+        }
     }
 
     @Override
@@ -131,6 +115,7 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         });
         mVideoLayout.prepare(createParams());
         mVideoLayout.play();
+        mVideoLayout.switchNormalMode();
     }
 
     @Override
@@ -144,6 +129,32 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
     public void onError() {
         // Preview Failed
         Log.d(TAG,"Preview Failed");
+        InstaCameraManager.getInstance().closePreviewStream();
+    }
+
+    @Override
+    public void onCameraPreviewStreamParamsChanged(BaseCamera baseCamera, boolean isPreviewStreamParamsChanged) {
+        Log.d(TAG, "liveStreamParams isPreviewStreamParamsChanged:" + isPreviewStreamParamsChanged);
+        if (!isPreviewStreamParamsChanged) {
+            Log.d(TAG, "liveStreamParams has nothing changed, ignored");
+            return;
+        }
+        WindowCropInfo curWindowCropInfo = mVideoLayout.getWindowCropInfo();
+        WindowCropInfo cameraWindowCropInfo = PreviewParamsUtil.windowCropInfoConversion(baseCamera.getWindowCropInfo());
+        if (mVideoLayout.isPlaying() && curWindowCropInfo != null && cameraWindowCropInfo != null) {
+            if (curWindowCropInfo.getSrcWidth() != cameraWindowCropInfo.getSrcWidth()
+                    || curWindowCropInfo.getSrcHeight() != cameraWindowCropInfo.getSrcHeight()
+                    || curWindowCropInfo.getDesWidth() != cameraWindowCropInfo.getDesWidth()
+                    || curWindowCropInfo.getDesHeight() != cameraWindowCropInfo.getDesHeight()
+                    || curWindowCropInfo.getOffsetX() != cameraWindowCropInfo.getOffsetX()
+                    || curWindowCropInfo.getOffsetY() != cameraWindowCropInfo.getOffsetY()) {
+                Log.d(TAG, "liveStreamParams changed windowCropInfo: " + baseCamera.getWindowCropInfo().toString());
+                mVideoLayout.setWindowCropInfo(cameraWindowCropInfo);
+                AssetInfo assetInfo = InstaCameraManager.getInstance().getConvertAssetInfo();
+                AssetInfo stabAssetInfo = InstaCameraManager.getInstance().getStabConvertAssetInfo();
+                mVideoLayout.setOffset(PreviewParamsUtil.getPlayerOffsetData(assetInfo), PreviewParamsUtil.getPlayerOffsetData(stabAssetInfo).getOffsetV1());
+            }
+        }
     }
 
     @Override
@@ -151,30 +162,39 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
         super.onCameraStatusChanged(enabled, connectType);
         Log.d(TAG,"onCameraStatusChanged");
         if (enabled) {
-            Log.d(TAG, "Camera Enabled");
-            InstaCameraManager.getInstance().startPreviewStream(InstaCameraManager.getInstance().getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL).get(0));
-            mVideoLayout.setPlayerViewListener(new PlayerViewListener() {
-                @Override
-                public void onLoadingFinish() {
-                    Log.d(TAG,"onLoadingFinish()");
-                    InstaCameraManager.getInstance().setPipeline(mVideoLayout.getPipeline());
-                }
-
-                @Override
-                public void onReleaseCameraPipeline() {
-                    Log.d(TAG,"onReleaseCameraPipeline()");
-                    InstaCameraManager.getInstance().setPipeline(null);
-                }
-            });
-            mVideoLayout.prepare(createParams());
-            mVideoLayout.play();
-            mVideoLayout.switchNormalMode();
-
+            Log.d(TAG, "onCameraStatusChanged: Camera Enabled");
+            mVideoLayout.setLifecycle(getLifecycle());
+            mCurrentResolution = InstaCameraManager.getInstance().getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL).get(0);
+            if (mCurrentResolution == null) {
+                InstaCameraManager.getInstance().startPreviewStream();
+            } else {
+                InstaCameraManager.getInstance().startPreviewStream(mCurrentResolution);
+            }
             InstaCameraManager.getInstance().setPreviewStatusChangedListener(this);
-        } else {
-
         }
     }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                leftKey();
+                return true;
+            case KeyEvent.KEYCODE_ESCAPE:
+                String wunderLINQApp = "wunderlinq://datagrid";
+                Intent intent = new
+                        Intent(android.content.Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(wunderLINQApp));
+                try {
+                    startActivity(intent);
+                } catch ( ActivityNotFoundException ignored) {
+                }
+                return true;
+            default:
+                return super.onKeyUp(keyCode, event);
+        }
+    }
+
     private void leftKey(){ finish(); }
 
     /**

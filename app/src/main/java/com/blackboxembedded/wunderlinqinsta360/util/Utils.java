@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-package com.blackboxembedded.wunderlinqinsta360;
+package com.blackboxembedded.wunderlinqinsta360.util;
 
 public class Utils {
     public static String ByteArraytoHex(byte[] bytes) {
