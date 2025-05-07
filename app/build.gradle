@@ -6,8 +6,8 @@ android {
         applicationId "com.blackboxembedded.wunderlinqinsta360"
         minSdkVersion 28
         targetSdkVersion 34
-        versionCode 12
-        versionName "1.11"
+        versionCode 13
+        versionName "1.12"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     packagingOptions {
