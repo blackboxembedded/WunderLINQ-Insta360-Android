@@ -26,6 +26,7 @@ import com.arashivision.sdkcamera.camera.InstaCameraManager;
 import com.arashivision.sdkcamera.camera.callback.ICameraChangedCallback;
 
 public abstract class BaseObserveCameraActivity extends AppCompatActivity implements ICameraChangedCallback {
+    protected String TAG = this.getClass().getSimpleName();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -45,7 +46,7 @@ public abstract class BaseObserveCameraActivity extends AppCompatActivity implem
      * @param enabled Whether the camera is available
      */
     @Override
-    public void onCameraStatusChanged(boolean enabled) {
+    public void onCameraStatusChanged(boolean enabled, int connectType) {
     }
 
     /**
@@ -54,6 +55,7 @@ public abstract class BaseObserveCameraActivity extends AppCompatActivity implem
      * A common situation is that other phones or other applications of this phone have already
      * established a connection with this camera, resulting in this establishment failure,
      * and other phones need to disconnect from this camera first.
+     *
      * @param errorCode
      */
     @Override
@@ -104,5 +106,4 @@ public abstract class BaseObserveCameraActivity extends AppCompatActivity implem
     @Override
     public void onCameraSensorModeChanged(int cameraSensorMode) {
     }
-
 }
