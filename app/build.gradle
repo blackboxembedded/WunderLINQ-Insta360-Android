@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdk 36
+    compileSdk=36
     defaultConfig {
         applicationId "com.blackboxembedded.wunderlinqinsta360"
         minSdkVersion 28
@@ -43,15 +43,17 @@ dependencies {
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'com.github.martin-stone:hsv-alpha-color-picker-android:3.1.0'
     implementation "androidx.cardview:cardview:1.0.0"
-    implementation "androidx.lifecycle:lifecycle-viewmodel:2.9.1"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.1"
-    implementation 'com.arashivision.sdk:sdkcamera:1.8.0_build_11'
-    implementation 'com.arashivision.sdk:sdkmedia:1.8.0_build_11'
+    implementation "androidx.lifecycle:lifecycle-viewmodel:2.9.3"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.3"
     implementation 'com.github.jeasonlzy:okhttp-OkGo:v3.0.4'
+    implementation("com.arashivision.sdk:sdkcamera:1.8.0_build_11") {
+        exclude group: "com.github.jeasonlzy", module: "okhttp-OkGo"
+    }
+    implementation 'com.arashivision.sdk:sdkmedia:1.8.0_build_11'
 
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
 }
 java {
     toolchain {
