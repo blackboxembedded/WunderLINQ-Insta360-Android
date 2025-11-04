@@ -429,6 +429,13 @@ public class DeviceControlActivity extends BaseObserveCameraActivity implements 
     }
 
     @Override
+    public void onCaptureError(int i) {
+        Log.d(TAG,"onCaptureError()");
+        cameraStatus.busy = false;
+        updateUIElements();
+    }
+
+    @Override
     public void onCaptureTimeChanged(long captureTime) {
         Log.d(TAG,"onCaptureTimeChanged()");
     }
