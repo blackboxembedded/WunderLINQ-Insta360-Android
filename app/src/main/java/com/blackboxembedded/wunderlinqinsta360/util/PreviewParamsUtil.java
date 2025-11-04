@@ -1,45 +1,43 @@
+/*
+WunderLINQ Client Application
+Copyright (C) 2020  Keith Conger, Black Box Embedded, LLC
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 package com.blackboxembedded.wunderlinqinsta360.util;
 
 import com.arashivision.graphicpath.render.source.AssetInfo;
 import com.arashivision.graphicpath.render.util.OffsetUtil;
-import com.arashivision.insta360.basemedia.asset.WindowCropInfo;
 import com.arashivision.insta360.basemedia.model.offset.OffsetData;
 import com.arashivision.insta360.basemedia.util.OffsetUtils;
 import com.arashivision.onecamera.OneDriverInfo;
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
-import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder;
+import com.arashivision.sdkmedia.params.RenderModel;
+import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilderV2;
 
 public class PreviewParamsUtil {
 
-    public static CaptureParamsBuilder getCaptureParamsBuilder() {
-        AssetInfo assetInfo = InstaCameraManager.getInstance().getConvertAssetInfo();
-        AssetInfo stabAssetInfo = InstaCameraManager.getInstance().getStabConvertAssetInfo();
-        return new CaptureParamsBuilder()
-                .setCameraType(InstaCameraManager.getInstance().getCameraType())
-                .setRenderModelType(InstaCameraManager.getInstance().getSupportRenderModelType())
-                .setMediaOffset(InstaCameraManager.getInstance().getMediaOffset())
-                .setMediaOffsetV2(InstaCameraManager.getInstance().getMediaOffsetV2())
-                .setMediaOffsetV3(InstaCameraManager.getInstance().getMediaOffsetV3())
-                .setOffsetData(PreviewParamsUtil.getPlayerOffsetData(assetInfo))
-                .setAssetInfo(assetInfo)
-                .setAssetInfo(assetInfo)
-                .setStabOffset(PreviewParamsUtil.getPlayerOffsetData(stabAssetInfo).getOffsetV1())
-                .setCameraSelfie(InstaCameraManager.getInstance().isCameraSelfie())
-                .setGyroTimeStamp(InstaCameraManager.getInstance().getGyroTimeStamp())
-                .setBatteryType(InstaCameraManager.getInstance().getBatteryType())
-                .setWindowCropInfo(windowCropInfoConversion(InstaCameraManager.getInstance().getWindowCropInfo()));
-    }
+    public static CaptureParamsBuilderV2 getCaptureParamsBuilder() {
+        CaptureParamsBuilderV2 builder = new CaptureParamsBuilderV2();
 
-    public static WindowCropInfo windowCropInfoConversion(com.arashivision.onecamera.camerarequest.WindowCropInfo cameraWindowCropInfo) {
-        if (cameraWindowCropInfo == null) return null;
-        WindowCropInfo windowCropInfo = new WindowCropInfo();
-        windowCropInfo.setDesHeight(cameraWindowCropInfo.getDstHeight());
-        windowCropInfo.setDesWidth(cameraWindowCropInfo.getDstWidth());
-        windowCropInfo.setSrcHeight(cameraWindowCropInfo.getSrcHeight());
-        windowCropInfo.setSrcWidth(cameraWindowCropInfo.getSrcWidth());
-        windowCropInfo.setOffsetX(cameraWindowCropInfo.getOffsetX());
-        windowCropInfo.setOffsetY(cameraWindowCropInfo.getOffsetY());
-        return windowCropInfo;
+        // Match sample behavior:
+        builder.setRenderModel(RenderModel.AUTO);
+
+        // Keep FlowState cache small/zero unless you need it
+        builder.setStabCacheFrameNum(0);
+
+        return builder;
     }
 
     public static OffsetData getPlayerOffsetData(AssetInfo assetInfo) {
@@ -70,9 +68,16 @@ public class PreviewParamsUtil {
                 }
                 break;
         }
+
         return OffsetUtils.convertOffset(
                 assetInfo,
-                new OffsetData(InstaCameraManager.getInstance().getMediaOffset(), InstaCameraManager.getInstance().getMediaOffsetV2(), InstaCameraManager.getInstance().getMediaOffsetV3(), null),
-                options);
+                new OffsetData(
+                        InstaCameraManager.getInstance().getMediaOffset(),
+                        InstaCameraManager.getInstance().getMediaOffsetV2(),
+                        InstaCameraManager.getInstance().getMediaOffsetV3(),
+                        null
+                ),
+                options
+        );
     }
 }

@@ -1,3 +1,20 @@
+/*
+WunderLINQ Client Application
+Copyright (C) 2020  Keith Conger, Black Box Embedded, LLC
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 package com.blackboxembedded.wunderlinqinsta360;
 
 import android.content.ActivityNotFoundException;
@@ -19,14 +36,12 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 
 import com.arashivision.graphicpath.render.source.AssetInfo;
-import com.arashivision.insta360.basecamera.camera.BaseCamera;
-import com.arashivision.insta360.basecamera.camera.CameraType;
 import com.arashivision.insta360.basemedia.asset.WindowCropInfo;
 import com.arashivision.onecamera.camerarequest.WifiInfo;
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener;
 import com.arashivision.sdkcamera.camera.resolution.PreviewStreamResolution;
-import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder;
+import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilderV2;
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView;
 import com.arashivision.sdkmedia.player.config.InstaStabType;
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener;
@@ -42,13 +57,14 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
     private InstaCapturePlayerView mVideoLayout;
     private PreviewStreamResolution mCurrentResolution;
 
-    private CaptureParamsBuilder createParams() {
-        CaptureParamsBuilder builder = PreviewParamsUtil.getCaptureParamsBuilder()
-                .setStabType(InstaStabType.STAB_TYPE_OFF)
-                .setStabEnabled(false);
+    private CaptureParamsBuilderV2 createParams() {
+        CaptureParamsBuilderV2 builder = PreviewParamsUtil.getCaptureParamsBuilder()
+                .setStabType(InstaStabType.STAB_TYPE_OFF);
 
         if (mCurrentResolution != null) {
-            builder.setResolutionParams(mCurrentResolution.width, mCurrentResolution.height, mCurrentResolution.fps);
+            builder.setFps(mCurrentResolution.fps);
+            builder.setHeight(mCurrentResolution.height);
+            builder.setWidth(mCurrentResolution.width);
         }
 
         return builder;
@@ -133,14 +149,46 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
     }
 
     @Override
-    public void onCameraPreviewStreamParamsChanged(BaseCamera baseCamera, boolean isPreviewStreamParamsChanged) {
+    public void onCameraPreviewStreamParamsChanged(boolean isPreviewStreamParamsChanged) {
         Log.d(TAG, "liveStreamParams isPreviewStreamParamsChanged:" + isPreviewStreamParamsChanged);
         if (!isPreviewStreamParamsChanged) {
             Log.d(TAG, "liveStreamParams has nothing changed, ignored");
             return;
         }
+
+        // Safe current mode + FlowState flag
+        com.arashivision.sdkcamera.camera.model.CaptureMode mode;
+        try {
+            mode = InstaCameraManager.getInstance().getCurrentCaptureMode();
+            if (mode == null) mode = com.arashivision.sdkcamera.camera.model.CaptureMode.RECORD_NORMAL;
+        } catch (Exception e) {
+            mode = com.arashivision.sdkcamera.camera.model.CaptureMode.RECORD_NORMAL;
+        }
+        boolean isFlowStateOn = InstaCameraManager.getInstance().isFlowstateOn(mode);
+
+        // From supportConfig (new API surface)
+        AssetInfo assetInfo = InstaCameraManager.getInstance()
+                .getSupportConfig()
+                .getConvertAssetInfo(mode, isFlowStateOn);
+
+        AssetInfo stabAssetInfo = InstaCameraManager.getInstance()
+                .getSupportConfig()
+                .getStabConvertAssetInfo(mode, isFlowStateOn);
+
+        // Build camera WindowCropInfo from AssetInfo *fields* (not getters)
+        WindowCropInfo cameraWindowCropInfo = null;
+        if (assetInfo != null) {
+            cameraWindowCropInfo = new WindowCropInfo();
+            cameraWindowCropInfo.setSrcWidth(assetInfo.cropWindowSrcWidth);
+            cameraWindowCropInfo.setSrcHeight(assetInfo.cropWindowSrcHeight);
+            cameraWindowCropInfo.setDesWidth(assetInfo.cropWindowDstWidth);
+            cameraWindowCropInfo.setDesHeight(assetInfo.cropWindowDstHeight);
+            cameraWindowCropInfo.setOffsetX(assetInfo.cropOffsetX);
+            cameraWindowCropInfo.setOffsetY(assetInfo.cropOffsetY);
+        }
+
         WindowCropInfo curWindowCropInfo = mVideoLayout.getWindowCropInfo();
-        WindowCropInfo cameraWindowCropInfo = PreviewParamsUtil.windowCropInfoConversion(baseCamera.getWindowCropInfo());
+
         if (mVideoLayout.isPlaying() && curWindowCropInfo != null && cameraWindowCropInfo != null) {
             if (curWindowCropInfo.getSrcWidth() != cameraWindowCropInfo.getSrcWidth()
                     || curWindowCropInfo.getSrcHeight() != cameraWindowCropInfo.getSrcHeight()
@@ -148,11 +196,16 @@ public class PreviewActivity extends BaseObserveCameraActivity implements IPrevi
                     || curWindowCropInfo.getDesHeight() != cameraWindowCropInfo.getDesHeight()
                     || curWindowCropInfo.getOffsetX() != cameraWindowCropInfo.getOffsetX()
                     || curWindowCropInfo.getOffsetY() != cameraWindowCropInfo.getOffsetY()) {
-                Log.d(TAG, "liveStreamParams changed windowCropInfo: " + baseCamera.getWindowCropInfo().toString());
+
+                Log.d(TAG, "liveStreamParams changed windowCropInfo");
                 mVideoLayout.setWindowCropInfo(cameraWindowCropInfo);
-                AssetInfo assetInfo = InstaCameraManager.getInstance().getConvertAssetInfo();
-                AssetInfo stabAssetInfo = InstaCameraManager.getInstance().getStabConvertAssetInfo();
-                mVideoLayout.setOffset(PreviewParamsUtil.getPlayerOffsetData(assetInfo), PreviewParamsUtil.getPlayerOffsetData(stabAssetInfo).getOffsetV1());
+
+                if (assetInfo != null && stabAssetInfo != null) {
+                    mVideoLayout.setOffset(
+                            PreviewParamsUtil.getPlayerOffsetData(assetInfo),
+                            PreviewParamsUtil.getPlayerOffsetData(stabAssetInfo).getOffsetV1()
+                    );
+                }
             }
         }
     }
