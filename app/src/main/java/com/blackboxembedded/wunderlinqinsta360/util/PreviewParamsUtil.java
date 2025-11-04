@@ -19,12 +19,10 @@ package com.blackboxembedded.wunderlinqinsta360.util;
 
 import com.arashivision.graphicpath.render.source.AssetInfo;
 import com.arashivision.graphicpath.render.util.OffsetUtil;
-import com.arashivision.insta360.basemedia.asset.WindowCropInfo;
 import com.arashivision.insta360.basemedia.model.offset.OffsetData;
 import com.arashivision.insta360.basemedia.util.OffsetUtils;
 import com.arashivision.onecamera.OneDriverInfo;
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
-import com.arashivision.sdkcamera.camera.model.CaptureMode;
 import com.arashivision.sdkmedia.params.RenderModel;
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilderV2;
 
@@ -35,9 +33,6 @@ public class PreviewParamsUtil {
 
         // Match sample behavior:
         builder.setRenderModel(RenderModel.AUTO);
-        // Optional (if you want plane stitch layout):
-        // builder.renderModel = RenderModel.PLANE_STITCH;
-        // builder.setScreenRatio(2, 1);
 
         // Keep FlowState cache small/zero unless you need it
         builder.setStabCacheFrameNum(0);

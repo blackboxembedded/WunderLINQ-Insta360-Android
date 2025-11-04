@@ -19,15 +19,11 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 
 import com.arashivision.graphicpath.render.source.AssetInfo;
-import com.arashivision.insta360.basecamera.camera.BaseCamera;
-import com.arashivision.insta360.basecamera.camera.CameraType;
 import com.arashivision.insta360.basemedia.asset.WindowCropInfo;
 import com.arashivision.onecamera.camerarequest.WifiInfo;
 import com.arashivision.sdkcamera.camera.InstaCameraManager;
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener;
-import com.arashivision.sdkcamera.camera.model.CaptureMode;
 import com.arashivision.sdkcamera.camera.resolution.PreviewStreamResolution;
-import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder;
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilderV2;
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView;
 import com.arashivision.sdkmedia.player.config.InstaStabType;
