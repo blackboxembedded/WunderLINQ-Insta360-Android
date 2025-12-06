@@ -6,13 +6,16 @@ android {
         applicationId "com.blackboxembedded.wunderlinqinsta360"
         minSdkVersion 28
         targetSdkVersion 36
-        versionCode 16
-        versionName "1.15"
+        versionCode 17
+        versionName "1.16"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters += ['arm64-v8a']
+        }
     }
     packagingOptions {
         jniLibs {
-            pickFirsts += ['lib/arm64-v8a/libc++_shared.so', 'lib/armeabi-v7a/libc++_shared.so']
+            pickFirsts += ['lib/arm64-v8a/libc++_shared.so']
         }
         resources {
             excludes += ['META-INF/rxjava.properties']
@@ -43,12 +46,9 @@ dependencies {
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'com.github.martin-stone:hsv-alpha-color-picker-android:3.1.0'
     implementation "androidx.cardview:cardview:1.0.0"
-    implementation "androidx.lifecycle:lifecycle-viewmodel:2.9.4"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4"
-    implementation 'com.github.jeasonlzy:okhttp-OkGo:v3.0.4'
-    implementation("com.arashivision.sdk:sdkcamera:1.8.2_build_04") {
-        exclude group: "com.github.jeasonlzy", module: "okhttp-OkGo"
-    }
+    implementation "androidx.lifecycle:lifecycle-viewmodel:2.10.0"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0"
+    implementation "com.arashivision.sdk:sdkcamera:1.8.2_build_04"
     implementation 'com.arashivision.sdk:sdkmedia:1.8.2_build_04'
 
     testImplementation 'junit:junit:4.13.2'

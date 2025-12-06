@@ -3,13 +3,10 @@
 buildscript {
     repositories {
         google()
-        jcenter()
         mavenCentral()
-
-        maven { url 'https://maven.aliyun.com/repository/public/' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'com.android.tools.build:gradle:8.13.1'
         
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -18,14 +15,13 @@ buildscript {
 
 allprojects {
     repositories {
-        google()
-        jcenter()
-        mavenCentral()
-
+        maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots") }
+        maven { url = uri("https://maven.aliyun.com/repository/public/") }
         maven { url "https://jitpack.io" }
-        maven { url 'https://maven.aliyun.com/repository/public/' }
+        google()
+        mavenCentral()
         maven {
-            url 'http://nexus.arashivision.com:9999/repository/maven-public/'
+            url 'https://androidsdk.insta360.com/repository/maven-public/'
             allowInsecureProtocol = true
             credentials {
                 username = project.findProperty("INSTA360_REPO_USER") ?: ""
